@@ -1,0 +1,12 @@
+name: app_orm
+version: 1.0.0
+
+environment:
+  sdk: ^3.1.0
+
+dependencies:
+#  appwrite: ^11.0.1
+  dart_appwrite: ^10.1.0
+
+dev_dependencies:
+  lints: ^3.0.0
