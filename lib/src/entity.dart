@@ -1,49 +1,41 @@
 import "package:app_orm/src/annotations.dart";
+import "package:app_orm/src/identifiable.dart";
+import "package:app_orm/src/utils.dart";
 
-abstract class Entity {
-  String id;
-/*  String collectionId;
-  String databaseId;
-  DateTime createdAt;
-  DateTime updatedAt;
-  List permissions;*/
-
+abstract class Entity extends Identifiable {
   Entity({
-    required this.id,
+    required super.id,
   });
 
-  Entity.none() : id = "";
+  //TODO: Test this method
+  static T mutate<T extends Entity>(T entity, Map<String, dynamic> data) {
+    final fields = Reflection.fieldsFromInstance(entity);
 
-  Entity empty();
+    fields.forEach((name, reflectedVariable) {
+      if (data.containsKey(name)) reflectedVariable.value = data[name];
+    });
+
+    return entity;
+  }
 }
 
 class Address extends Entity {
-  @StringAttribute(maxLength: 20)
+  @OrmString(maxLength: 20)
   String city;
 
   Address({
     required super.id,
     required this.city,
   });
-
-  @override
-  Address empty() {
-    return Address(id: "", city: "");
-  }
 }
 
-class User extends Entity {
+class Usere extends Entity {
   String name;
-  Address? address;
+  // Address? address;
 
-  User({
+  Usere({
     required super.id,
     required this.name,
-    required this.address,
+    // required this.address,
   });
-
-  @override
-  User empty() {
-    return User(id: "", name: "", address: null);
-  }
 }

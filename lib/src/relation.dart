@@ -1,4 +1,4 @@
-import 'entity.dart';
+import "entity.dart";
 
 abstract class Relation<S extends Entity, D> {
   S? _source;

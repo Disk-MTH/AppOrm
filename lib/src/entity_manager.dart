@@ -1,42 +1,129 @@
 import "package:app_orm/src/entity.dart";
+import "package:app_orm/src/logger.dart";
+import "package:app_orm/src/repository.dart";
 import "package:app_orm/src/utils.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
+import "package:dart_appwrite/models.dart";
 
-class EntityManager {
+import "identifiable.dart";
+
+class EntityManager extends Identifiable {
+  final AbstractLogger logger;
   final Client _client;
   final Databases _databases;
 
-  EntityManager(this._client) : _databases = Databases(_client);
+  final List<Type> _entityTypes = [];
+  final List<Repository> _repositories = [];
 
-  void pushModel(List<Type> entities) {
-    for (var type in entities) {
-      if (!Utils.isSubtype<Entity>(type)) throw "Type is not an Entity";
+  EntityManager(
+    this._client,
+    String databaseId, [
+    AbstractLogger? logger,
+  ])  : logger = logger ?? Logger(),
+        _databases = Databases(_client),
+        super(id: databaseId);
 
-/*      var a = Utils.fieldsFromClass(type);
-      a.forEach((key, value) {
-        print("## Key: $key, Type: ${value.type.reflectedType}");
-      });*/
+/*  List<Type> findEntities() {
+    final entities = <Type>[];
 
-      var i = Address(id: "aaaaa", city: "dddd");
-      var b = Utils.fieldsFromInstance(i);
-      b.forEach((key, value) {
-        print("@@ Key: $key, Value: ${value.value}");
+    currentMirrorSystem().libraries.forEach((key, value) {
+      value.declarations.forEach((key, value) {
+        bool isAnnotationPresent = value.metadata.any((element) {
+          return element.type.reflectedType == OrmEntity;
+        });
+
+        logger.log("Class: $key, isAnnotationPresent: $isAnnotationPresent");
       });
+    });
 
-      /*ClassMirror cm = reflectClass(type);
-      cm.declarations.forEach((key, value) {
-        if (value is VariableMirror) {
-          final fieldName = MirrorSystem.getName(key);
-          final fieldType = value.type.reflectedType;
+    return entities;
+  }*/
 
-          var metadata = value.metadata;
-          */ /*var hasSomeAnnotation =
-              metadata.any((m) => m.reflectee is SomeAnnotation);*/ /*
+/*  Repository<T> getRepository<T extends Entity>() {
+    final repository = Repository<T>(this, id: '');
+    _repositories.add(repository);
+    return repository;
+    //TODO return new or existing repository
+  }*/
 
-          print(
-              "Field: $fieldName, Type: $fieldType, Annotation: $hasSomeAnnotation");
-        }
-      });*/
+  Future<void> initialize(List<Type> entities) async {
+    logger.debug("Initializing entity manager: $id");
+
+    for (var type in entities) {
+      if (!Reflection.isSubtype<Entity>(type)) {
+        throw "Type \"$type\" is not an Entity";
+      }
+      logger.debug("Entity found: {}", args: [type]);
+      _entityTypes.add(type);
+    }
+
+    final List<Collection> collections = await _databases
+        .listCollections(databaseId: id)
+        .then((value) => value.collections);
+
+    logger.debug("Collections found: {}", args: [collections.length]);
+
+    for (var collection in collections) {
+      if (_entityTypes.any((type) => type.toString() == collection.name)) {
+        logger.debug(
+          "Repository mapped: {} with {}",
+          args: [collection.name, collection.$id],
+        );
+        _repositories.add(
+          Repository(
+            this,
+            id: collection.$id,
+            name: collection.name,
+          ),
+        );
+      } else {
+        logger.debug(
+          "No entity for collection: {} - {}",
+          args: [collection.name, collection.$id],
+        );
+      }
     }
   }
+
+  Future<void> pull() async {
+    logger.debug("Pulling data...");
+    for (var repository in _repositories) {
+      final List<Document> documents = await _databases
+          .listDocuments(databaseId: id, collectionId: repository.id)
+          .then((value) => value.documents);
+
+      logger.debug(
+        "Documents found for {}: {}",
+        args: [repository.name, documents.length],
+      );
+
+      for (var document in documents) {
+        //TODO: Load data recursively for nested entities
+      }
+    }
+  }
+
+// Future<void> sync() {}
+
+/*  void pushModel(List<Type> entities) {
+    for (var type in entities) {
+      if (!Reflection.isSubtype<Entity>(type)) {
+        throw "Type \"$type\" is not an Entity";
+      }
+
+      final fields = Reflection.fieldsFromClass(type);
+
+      fields.forEach((key, value) {
+        for (var annotation in value.metadata) {
+          switch (annotation.type.reflectedType) {
+            case const (OrmString):
+              print("StringAttribute");
+              break;
+            default:
+              throw "Unknown annotation";
+          }
+        }
+      });
+    }
+  }*/
 }

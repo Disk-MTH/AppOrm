@@ -1,17 +1,17 @@
-abstract class _Attribute {
+abstract class _OrmAttribute {
   final bool required;
   final bool isArray;
 
-  const _Attribute({
+  const _OrmAttribute({
     this.required = false,
     this.isArray = false,
   });
 }
 
-class StringAttribute extends _Attribute {
+class OrmString extends _OrmAttribute {
   final int maxLength;
 
-  const StringAttribute({
+  const OrmString({
     super.required,
     super.isArray,
     required this.maxLength,

@@ -1,23 +1,43 @@
+import "dart:math";
 import "dart:mirrors";
 
-import "../app_orm.dart";
+import "package:app_orm/src/reflected_variable.dart";
 
 class Utils {
-  static bool isSubtype<T>(Type type) {
-    ClassMirror cm = reflectClass(type);
+  static final Random random = Random(DateTime.now().millisecondsSinceEpoch);
+  static const String idCharset = "abcdefghijklmnopqrstuvwxyz0123456789";
 
-    while (cm.superclass != null && cm.superclass != reflectClass(Object)) {
-      cm = cm.superclass!;
+  static String uniqueId() {
+    return List.generate(20, (_) => idCharset[random.nextInt(idCharset.length)])
+        .join();
+  }
+
+  static String camelCaseToSnakeCase(String input) {
+    return input
+        .replaceAllMapped(
+          RegExp(r"(?<=[a-z])[A-Z]"),
+          (Match match) => "_${match.group(0)!.toLowerCase()}",
+        )
+        .toLowerCase();
+  }
+}
+
+class Reflection {
+  static bool isSubtype<T>(Type type) {
+    ClassMirror? cm = reflectClass(type);
+
+    while (cm != null && cm != reflectClass(Object)) {
       if (cm == reflectClass(T)) {
         return true;
       }
+      cm = cm.superclass;
     }
 
     return false;
   }
 
   static Map<String, VariableMirror> fieldsFromClass(Type type) {
-    final Map<String, VariableMirror> fields = {};
+    final fields = <String, VariableMirror>{};
     ClassMirror? cm = reflectClass(type);
 
     while (cm != null && cm != reflectClass(Object)) {
@@ -31,9 +51,9 @@ class Utils {
   }
 
   static Map<String, ReflectedVariable> fieldsFromInstance(Object instance) {
-    final Map<String, ReflectedVariable> fields = {};
+    final fields = <String, ReflectedVariable>{};
     final classFields = fieldsFromClass(instance.runtimeType);
-    final im = reflect(instance);
+    final InstanceMirror im = reflect(instance);
 
     classFields.forEach((name, variableMirror) {
       fields[name] = ReflectedVariable(

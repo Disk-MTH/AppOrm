@@ -2,7 +2,7 @@ import 'dart:mirrors';
 
 class ReflectedVariable {
   final VariableMirror variableMirror;
-  final dynamic value;
+  dynamic value;
 
-  const ReflectedVariable(this.variableMirror, this.value);
+  ReflectedVariable(this.variableMirror, this.value);
 }
