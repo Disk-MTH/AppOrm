@@ -27,7 +27,7 @@ class EntityManager extends Identifiable {
           $createdAt: "",
           $updatedAt: "",
           enabled: true,
-        ));
+        )); //TODO change this
 
   // super(id: databaseId);
 
@@ -104,13 +104,15 @@ class EntityManager extends Identifiable {
       );
 
       for (var document in documents) {
+        logger.warn("Intantiating ${repository.type}");
+
         repository.add(Reflection.instantiate(
           repository.type,
           args: [document],
         ));
       }
 
-      logger.log(repository.list());
+      // logger.log(repository);
       //print(repository.toMap());
     }
   }

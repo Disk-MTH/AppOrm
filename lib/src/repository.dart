@@ -23,9 +23,4 @@ class Repository extends Identifiable {
   void remove(Entity entity) {
     _entities.remove(entity);
   }
-
-/*  Future<T> create(T entity);
-  Future<T> read(String id);
-  Future<T> update(T entity);
-  Future<T> delete(String id);*/
 }

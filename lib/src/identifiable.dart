@@ -20,6 +20,7 @@ class Identifiable<M extends Model> implements Model {
         id = model.$id;
         createdAt = model.$createdAt;
         updatedAt = model.$updatedAt;
+        break;
       case const (Collection):
         model as Collection;
         id = model.$id;
@@ -33,7 +34,7 @@ class Identifiable<M extends Model> implements Model {
         updatedAt = model.$updatedAt;
         break;
       default:
-        throw "Unsupported model type: ${model.runtimeType}";
+        throw "Unsupported model type: \"${model.runtimeType}\"";
     }
   }
 
