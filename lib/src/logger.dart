@@ -1,3 +1,5 @@
+import 'package:app_orm/src/utils.dart';
+
 abstract class AbstractLogger {
   void debug(
     dynamic message, {
@@ -39,6 +41,7 @@ class Logger implements AbstractLogger {
     List<dynamic> args = const [],
   }) {
     if (level.index <= LogLevel.debug.index) {
+      message = Utils.beautify(message);
       for (var arg in args) {
         message = message.replaceFirst("{}", arg.toString());
       }
@@ -52,6 +55,7 @@ class Logger implements AbstractLogger {
     List<dynamic> args = const [],
   }) {
     if (level.index <= LogLevel.log.index) {
+      message = Utils.beautify(message);
       for (var arg in args) {
         message = message.replaceFirst("{}", arg.toString());
       }
@@ -66,6 +70,7 @@ class Logger implements AbstractLogger {
     List<dynamic> args = const [],
   }) {
     if (level.index <= LogLevel.warn.index) {
+      message = Utils.beautify(message);
       for (var arg in args) {
         message = message.replaceFirst("{}", arg.toString());
       }
@@ -83,6 +88,7 @@ class Logger implements AbstractLogger {
     List<dynamic> args = const [],
   }) {
     if (level.index <= LogLevel.error.index) {
+      message = Utils.beautify(message);
       for (var arg in args) {
         message = message.replaceFirst("{}", arg.toString());
       }

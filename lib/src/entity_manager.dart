@@ -21,7 +21,15 @@ class EntityManager extends Identifiable {
     AbstractLogger? logger,
   ])  : logger = logger ?? Logger(),
         _databases = Databases(_client),
-        super(id: databaseId);
+        super(Database(
+          $id: databaseId,
+          name: "",
+          $createdAt: "",
+          $updatedAt: "",
+          enabled: true,
+        ));
+
+  // super(id: databaseId);
 
 /*  List<Type> findEntities() {
     final entities = <Type>[];
@@ -64,18 +72,16 @@ class EntityManager extends Identifiable {
     logger.debug("Collections found: {}", args: [collections.length]);
 
     for (var collection in collections) {
-      if (_entityTypes.any((type) => type.toString() == collection.name)) {
+      final Type? entityType = _entityTypes.where((type) {
+        return type.toString() == collection.name;
+      }).firstOrNull;
+
+      if (entityType != null) {
         logger.debug(
           "Repository mapped: {} with {}",
           args: [collection.name, collection.$id],
         );
-        _repositories.add(
-          Repository(
-            this,
-            id: collection.$id,
-            name: collection.name,
-          ),
-        );
+        _repositories.add(Repository(entityType, collection));
       } else {
         logger.debug(
           "No entity for collection: {} - {}",
@@ -94,12 +100,18 @@ class EntityManager extends Identifiable {
 
       logger.debug(
         "Documents found for {}: {}",
-        args: [repository.name, documents.length],
+        args: [repository.type.toString(), documents.length],
       );
 
       for (var document in documents) {
-        //TODO: Load data recursively for nested entities
+        repository.add(Reflection.instantiate(
+          repository.type,
+          args: [document],
+        ));
       }
+
+      logger.log(repository.list());
+      //print(repository.toMap());
     }
   }
 

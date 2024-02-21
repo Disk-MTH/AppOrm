@@ -19,7 +19,7 @@ void main() async {
   );
   final AbstractLogger logger = entityManager.logger;
 
-  await entityManager.initialize([Address]);
+  await entityManager.initialize([Address, User]);
   await entityManager.pull();
 
   logger.log("Finished");

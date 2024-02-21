@@ -1,20 +1,27 @@
 import 'package:app_orm/src/entity.dart';
 import 'package:app_orm/src/identifiable.dart';
+import 'package:dart_appwrite/models.dart';
 
-import 'entity_manager.dart';
+class Repository extends Identifiable {
+  final Type type;
+  final List<Entity> _entities = [];
 
-class Repository<T extends Entity> extends Identifiable {
-  final EntityManager entityManager;
-  final String name;
+  Repository(this.type, Collection collection) : super(collection) {}
 
-  Repository(
-    this.entityManager, {
-    required super.id,
-    required this.name,
-  });
+  List<Entity> list() {
+    return _entities;
+  }
 
-  Future<List<T>> list() {
-    return Future.value([]);
+  void add(Entity entity) {
+    if (entity.runtimeType != type) {
+      throw "Invalid entity type: ${entity.runtimeType} for repository: $type";
+    }
+
+    _entities.add(entity);
+  }
+
+  void remove(Entity entity) {
+    _entities.remove(entity);
   }
 
 /*  Future<T> create(T entity);
