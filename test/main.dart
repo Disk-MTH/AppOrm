@@ -22,7 +22,7 @@ void main() async {
   await entityManager.initialize([Address, User]);
   await entityManager.pull();
 
-  logger.log("Finished");
+  entityManager.logger.log("Finished");
   exit(0);
 
 /*  final Collection repository = entityManager.getRepository<AddressTest>();

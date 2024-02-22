@@ -4,13 +4,13 @@ import "package:dart_appwrite/models.dart";
 import "annotations.dart";
 
 class Identifiable<M extends Model> implements Model {
-  @OrmString(maxLength: 20)
+  @OrmNative()
   late String id;
 
-  @OrmString(maxLength: 20)
+  @OrmNative()
   late String createdAt;
 
-  @OrmString(maxLength: 20)
+  @OrmNative()
   late String updatedAt;
 
   Identifiable(M model) {

@@ -7,42 +7,25 @@ import "package:dart_appwrite/models.dart";
 
 abstract class Entity extends Identifiable<Document> {
   Entity(Document document) : super(document) {
-    final fields = Reflection.listClassFields(runtimeType);
-
-    fields.forEach((name, mirror) {
-      final InstanceMirror? metadata = mirror.metadata
-          .where((e) =>
-              Reflection.isSubtype<OrmAttribute>(e.reflectee.runtimeType))
-          .firstOrNull;
+    Reflection.listClassFields(runtimeType).forEach((name, mirror) {
+      final InstanceMirror? metadata =
+          mirror.metadata.where((e) => e.reflectee is OrmAttribute).firstOrNull;
 
       if (metadata == null) return;
 
       final OrmAttribute annotation = metadata.reflectee;
-      final value = document.data[name];
-
       annotation.validate();
 
-      if (value == null && (annotation.isRequired || annotation.isArray)) {
-        throw "Field \"$name\" is not nullable";
-      }
+      final value =
+          document.data[annotation.runtimeType == OrmNative ? "\$$name" : name];
 
-      switch (annotation.runtimeType) {
-        case const (OrmString):
-          print("StringAttribute");
-          break;
-        case const (OrmEntity):
-          print("EntityAttribute");
-          break;
-        default:
-          throw "Unknown annotation";
-      }
-
-      /*final value = document.data[name];
-
-      //TODO: add support for null/non-nullable fields
-      if (value != null) {
+      if (annotation.runtimeType != OrmNative &&
+          annotation.runtimeType != OrmEntity) {
+        if (value == null && (annotation.isRequired || annotation.isArray)) {
+          throw "Field \"$name\" is not nullable";
+        }
         Reflection.setFieldValue(this, mirror, value);
-      }*/
+      }
     });
   }
 

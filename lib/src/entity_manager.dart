@@ -1,3 +1,5 @@
+import "dart:mirrors";
+
 import "package:app_orm/src/entity.dart";
 import "package:app_orm/src/logger.dart";
 import "package:app_orm/src/repository.dart";
@@ -5,6 +7,7 @@ import "package:app_orm/src/utils.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
 import "package:dart_appwrite/models.dart";
 
+import "annotations.dart";
 import "identifiable.dart";
 
 class EntityManager extends Identifiable {
@@ -14,6 +17,8 @@ class EntityManager extends Identifiable {
 
   final List<Type> _entityTypes = [];
   final List<Repository> _repositories = [];
+
+  get repositories => _repositories;
 
   EntityManager(
     this._client,
@@ -91,7 +96,7 @@ class EntityManager extends Identifiable {
     }
   }
 
-  Future<void> pull() async {
+/*  Future<void> pull() async {
     logger.debug("Pulling data...");
     for (var repository in _repositories) {
       final List<Document> documents = await _databases
@@ -111,9 +116,56 @@ class EntityManager extends Identifiable {
           args: [document],
         ));
       }
+    }
+  }*/
 
-      // logger.log(repository);
-      //print(repository.toMap());
+  Future<void> pull() async {
+    logger.debug("Pulling data...");
+
+    final Map<Type, List<Document>> documentsByType = {};
+    final Map<String, Entity> entitiesById = {};
+
+    for (var repository in _repositories) {
+      final List<Document> documents = await _databases
+          .listDocuments(databaseId: id, collectionId: repository.id)
+          .then((value) => value.documents);
+
+      documentsByType[repository.type] = documents;
+
+      logger.debug(
+        "Documents found for {}: {}",
+        args: [repository.type.toString(), documents.length],
+      );
+      logger.debug(
+        "Instantiating {} {}",
+        args: [documents.length, repository.type],
+      );
+
+      for (var document in documents) {
+        final Entity entity = Reflection.instantiate(
+          repository.type,
+          args: [document],
+        );
+        repository.add(entity);
+        entitiesById[entity.id] = entity;
+      }
+    }
+
+    for (var entity in entitiesById.values) {
+      Reflection.listClassFields(entity.runtimeType).forEach((name, mirror) {
+        final InstanceMirror? metadata = mirror.metadata
+            .where((e) => e.reflectee is OrmAttribute)
+            .firstOrNull;
+
+        if (metadata == null) return;
+
+        final OrmAttribute annotation = metadata.reflectee;
+        annotation.validate();
+
+        if (annotation.runtimeType == OrmEntity) {
+          //TODO
+        }
+      });
     }
   }
 
