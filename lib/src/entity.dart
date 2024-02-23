@@ -1,28 +1,32 @@
 import "dart:mirrors";
 
 import "package:app_orm/src/annotations.dart";
-import "package:app_orm/src/entity_manager.dart";
 import "package:app_orm/src/identifiable.dart";
 import "package:app_orm/src/utils.dart";
 import "package:dart_appwrite/models.dart";
 
 abstract class Entity extends Identifiable<Document> {
-  final EntityManager entityManager;
-
   @OrmNative($prefix: true)
   late final String databaseId;
 
   @OrmNative($prefix: true)
   late final String collectionId;
 
+  //TODO: review this
   @OrmNative($prefix: true)
   late final List permissions;
 
-  Entity(this.entityManager, Document document) : super(document) {
-    Reflection.listClassFields(runtimeType).forEach((name, mirror) async {
+  //late final AppOrm appOrm;
+
+  Entity(Document document) {
+    initialize(document);
+    Reflection.listClassFields(runtimeType).forEach((name, mirror) {
       final InstanceMirror? metadata = mirror.metadata
           .where(
-            (e) => e.reflectee is OrmAttribute && e.reflectee is! OrmNative,
+            (e) =>
+                e.reflectee is OrmAttribute &&
+                e.reflectee is! OrmNative &&
+                e.reflectee is! OrmEntity,
           )
           .firstOrNull;
 
@@ -34,16 +38,10 @@ abstract class Entity extends Identifiable<Document> {
       name = name.substring(1);
       final value = document.data[name];
 
-      if (annotation.runtimeType != OrmEntity) {
-        if (value == null && (annotation.isRequired || annotation.isArray)) {
-          throw "Field \"$name\" is not nullable";
-        }
-        Reflection.setFieldValue(this, mirror, value);
-      } else {
-        final repository = await entityManager.getRepository<T>();
-        final entities = await repository.list();
-        return entities.firstWhere((entity) => entity.id == id);
+      if (value == null && (annotation.isRequired || annotation.isArray)) {
+        throw "Field \"$name\" is not nullable";
       }
+      Reflection.setFieldValue(this, value, mirror: mirror);
     });
   }
 

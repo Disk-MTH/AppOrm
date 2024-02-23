@@ -15,7 +15,7 @@ class Identifiable<M extends Model> implements Model {
   @OrmNative($prefix: true)
   late final String updatedAt;
 
-  Identifiable(M model) {
+  void initialize(M model) {
     Reflection.listClassFields(runtimeType).forEach((name, mirror) {
       final InstanceMirror? metadata =
           mirror.metadata.where((e) => e.reflectee is OrmNative).firstOrNull;
@@ -27,10 +27,10 @@ class Identifiable<M extends Model> implements Model {
 
       Reflection.setFieldValue(
         this,
-        mirror,
         Reflection.listInstanceFields(
                 model)[annotation.$prefix ? "\$$name" : name]
             ?.value,
+        mirror: mirror,
       );
     });
   }

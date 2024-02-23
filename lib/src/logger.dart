@@ -25,6 +25,8 @@ abstract class AbstractLogger {
 }
 
 class DummyLogger implements AbstractLogger {
+  const DummyLogger();
+
   @override
   void debug(
     dynamic message, {

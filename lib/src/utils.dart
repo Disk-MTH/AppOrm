@@ -14,15 +14,6 @@ class Utils {
         .join();
   }
 
-  static String camelCaseToSnakeCase(String input) {
-    return input
-        .replaceAllMapped(
-          RegExp(r"(?<=[a-z])[A-Z]"),
-          (Match match) => "_${match.group(0)!.toLowerCase()}",
-        )
-        .toLowerCase();
-  }
-
   static String beautify(dynamic input) {
     if (input is Model) input = input.toMap();
     if (input is List<Model>) input = input.map((e) => e.toMap()).toList();
@@ -63,10 +54,9 @@ class Reflection {
 
   static Map<String, ReflectedVariable> listInstanceFields(Object instance) {
     final fields = <String, ReflectedVariable>{};
-    final classFields = listClassFields(instance.runtimeType);
     final InstanceMirror im = reflect(instance);
 
-    classFields.forEach((name, variableMirror) {
+    listClassFields(instance.runtimeType).forEach((name, variableMirror) {
       fields[name] = ReflectedVariable(
         variableMirror,
         im.getField(variableMirror.simpleName).reflectee,
@@ -78,10 +68,18 @@ class Reflection {
 
   static void setFieldValue(
     Object instance,
-    VariableMirror mirror,
-    dynamic value,
-  ) {
-    reflect(instance).setField(mirror.simpleName, value);
+    dynamic value, {
+    String? name,
+    VariableMirror? mirror,
+  }) {
+    if ((name == null && mirror == null) || (name != null && mirror != null)) {
+      throw "You must provide a field OR a variable mirror";
+    }
+
+    reflect(instance).setField(
+      name != null ? Symbol(name) : mirror!.simpleName,
+      value,
+    );
   }
 
   static I instantiate<I>({
