@@ -1,41 +1,38 @@
+import "dart:mirrors";
+
 import "package:app_orm/src/utils.dart";
 import "package:dart_appwrite/models.dart";
 
 import "annotations.dart";
 
 class Identifiable<M extends Model> implements Model {
-  @OrmNative()
-  late String id;
+  @OrmNative($prefix: true)
+  late final String id;
 
-  @OrmNative()
-  late String createdAt;
+  @OrmNative($prefix: true)
+  late final String createdAt;
 
-  @OrmNative()
-  late String updatedAt;
+  @OrmNative($prefix: true)
+  late final String updatedAt;
 
   Identifiable(M model) {
-    switch (model.runtimeType) {
-      case const (Database):
-        model as Database;
-        id = model.$id;
-        createdAt = model.$createdAt;
-        updatedAt = model.$updatedAt;
-        break;
-      case const (Collection):
-        model as Collection;
-        id = model.$id;
-        createdAt = model.$createdAt;
-        updatedAt = model.$updatedAt;
-        break;
-      case const (Document):
-        model as Document;
-        id = model.$id;
-        createdAt = model.$createdAt;
-        updatedAt = model.$updatedAt;
-        break;
-      default:
-        throw "Unsupported model type: \"${model.runtimeType}\"";
-    }
+    Reflection.listClassFields(runtimeType).forEach((name, mirror) {
+      final InstanceMirror? metadata =
+          mirror.metadata.where((e) => e.reflectee is OrmNative).firstOrNull;
+
+      if (metadata == null) return;
+
+      final OrmNative annotation = metadata.reflectee;
+      annotation.validate();
+
+      Reflection.setFieldValue(
+        this,
+        mirror,
+        Reflection.listInstanceFields(
+                model)[annotation.$prefix ? "\$$name" : name]
+            ?.value,
+      );
+    });
   }
 
   @override

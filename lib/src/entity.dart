@@ -6,21 +6,33 @@ import "package:app_orm/src/utils.dart";
 import "package:dart_appwrite/models.dart";
 
 abstract class Entity extends Identifiable<Document> {
+  @OrmNative($prefix: true)
+  late final String databaseId;
+
+  @OrmNative($prefix: true)
+  late final String collectionId;
+
+  @OrmNative($prefix: true)
+  late final List permissions;
+
   Entity(Document document) : super(document) {
     Reflection.listClassFields(runtimeType).forEach((name, mirror) {
-      final InstanceMirror? metadata =
-          mirror.metadata.where((e) => e.reflectee is OrmAttribute).firstOrNull;
+      final InstanceMirror? metadata = mirror.metadata
+          .where(
+            (e) => e.reflectee is OrmAttribute && e.reflectee is! OrmNative,
+          )
+          .firstOrNull;
 
       if (metadata == null) return;
 
       final OrmAttribute annotation = metadata.reflectee;
       annotation.validate();
 
-      final value =
-          document.data[annotation.runtimeType == OrmNative ? "\$$name" : name];
+      //TODO check this
+      print(name);
+      final value = document.data[name];
 
-      if (annotation.runtimeType != OrmNative &&
-          annotation.runtimeType != OrmEntity) {
+      if (annotation.runtimeType != OrmEntity) {
         if (value == null && (annotation.isRequired || annotation.isArray)) {
           throw "Field \"$name\" is not nullable";
         }
@@ -39,21 +51,4 @@ abstract class Entity extends Identifiable<Document> {
 
     return entity;
   }*/
-}
-
-class Address extends Entity {
-  @OrmString(maxLength: 100)
-  late String city;
-
-  Address(super.document);
-}
-
-class User extends Entity {
-  @OrmString(isRequired: true, maxLength: 100)
-  late String name;
-
-  @OrmEntity(type: Address)
-  late Address address;
-
-  User(super.model);
 }

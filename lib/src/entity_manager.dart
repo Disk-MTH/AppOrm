@@ -1,40 +1,66 @@
-import "dart:mirrors";
-
-import "package:app_orm/src/entity.dart";
 import "package:app_orm/src/logger.dart";
 import "package:app_orm/src/repository.dart";
-import "package:app_orm/src/utils.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
 import "package:dart_appwrite/models.dart";
 
 import "annotations.dart";
+import "entity.dart";
 import "identifiable.dart";
 
 class EntityManager extends Identifiable {
+  @OrmNative()
+  late final String name;
+
+  @OrmNative()
+  late final bool enabled;
+
   final AbstractLogger logger;
-  final Client _client;
-  final Databases _databases;
+  final Databases databases;
 
-  final List<Type> _entityTypes = [];
-  final List<Repository> _repositories = [];
+  final Map<Type, Repository> _repositories = {};
 
-  get repositories => _repositories;
+  EntityManager._(
+    this.databases,
+    super.model, [
+    AbstractLogger? logger,
+  ]) : logger = logger ?? DummyLogger();
 
-  EntityManager(
-    this._client,
+  static Future<EntityManager> create(
+    Databases databases,
     String databaseId, [
     AbstractLogger? logger,
-  ])  : logger = logger ?? Logger(),
-        _databases = Databases(_client),
-        super(Database(
-          $id: databaseId,
-          name: "",
-          $createdAt: "",
-          $updatedAt: "",
-          enabled: true,
-        )); //TODO change this
+  ]) async {
+    return EntityManager._(
+      databases,
+      await databases.get(databaseId: databaseId),
+      logger ?? DummyLogger(),
+    );
+  }
 
-  // super(id: databaseId);
+  Future<Repository<T>> getRepository<T extends Entity>() async {
+    Repository<T>? repository = _repositories[T] as Repository<T>?;
+
+    if (repository == null) {
+      final List<Collection> collections = await databases
+          .listCollections(databaseId: id)
+          .then((value) => value.collections);
+
+      repository = Repository<T>(
+        this,
+        collections.where((e) => e.name == T.toString()).first,
+      );
+      _repositories[T] = repository;
+    }
+
+    return repository;
+  }
+
+  void tempLog() {
+    print('Temp log: ${_repositories.length}');
+    for (var key in _repositories.keys) {
+      print('Key: $key, Value: ${_repositories[key]?.toMap()}');
+    }
+  }
 
 /*  List<Type> findEntities() {
     final entities = <Type>[];
@@ -59,7 +85,7 @@ class EntityManager extends Identifiable {
     //TODO return new or existing repository
   }*/
 
-  Future<void> initialize(List<Type> entities) async {
+/*Future<void> initialize(List<Type> entities) async {
     logger.debug("Initializing entity manager: $id");
 
     for (var type in entities) {
@@ -94,32 +120,9 @@ class EntityManager extends Identifiable {
         );
       }
     }
-  }
-
-/*  Future<void> pull() async {
-    logger.debug("Pulling data...");
-    for (var repository in _repositories) {
-      final List<Document> documents = await _databases
-          .listDocuments(databaseId: id, collectionId: repository.id)
-          .then((value) => value.documents);
-
-      logger.debug(
-        "Documents found for {}: {}",
-        args: [repository.type.toString(), documents.length],
-      );
-
-      for (var document in documents) {
-        logger.warn("Intantiating ${repository.type}");
-
-        repository.add(Reflection.instantiate(
-          repository.type,
-          args: [document],
-        ));
-      }
-    }
   }*/
 
-  Future<void> pull() async {
+/*Future<void> pull() async {
     logger.debug("Pulling data...");
 
     final Map<Type, List<Document>> documentsByType = {};
@@ -179,30 +182,6 @@ class EntityManager extends Identifiable {
           }
 
           Reflection.setFieldValue(entity, mirror, entitiesById[refDoc.$id]!);
-        }
-      });
-    }
-  }
-
-// Future<void> sync() {}
-
-/*  void pushModel(List<Type> entities) {
-    for (var type in entities) {
-      if (!Reflection.isSubtype<Entity>(type)) {
-        throw "Type \"$type\" is not an Entity";
-      }
-
-      final fields = Reflection.fieldsFromClass(type);
-
-      fields.forEach((key, value) {
-        for (var annotation in value.metadata) {
-          switch (annotation.type.reflectedType) {
-            case const (OrmString):
-              print("StringAttribute");
-              break;
-            default:
-              throw "Unknown annotation";
-          }
         }
       });
     }

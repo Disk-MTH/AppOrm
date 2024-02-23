@@ -55,8 +55,11 @@ abstract class OrmNumber<T extends num> extends OrmAttribute<T> {
 }
 
 class OrmNative extends OrmAttribute {
+  final bool $prefix;
+
   const OrmNative({
     super.isRequired = true,
+    this.$prefix = false,
   });
 }
 

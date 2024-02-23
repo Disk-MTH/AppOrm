@@ -24,6 +24,34 @@ abstract class AbstractLogger {
   });
 }
 
+class DummyLogger implements AbstractLogger {
+  @override
+  void debug(
+    dynamic message, {
+    List<dynamic> args = const [],
+  }) {}
+
+  @override
+  void log(
+    dynamic message, {
+    List<dynamic> args = const [],
+  }) {}
+
+  @override
+  void warn(
+    dynamic message, {
+    Exception? exception,
+    List<dynamic> args = const [],
+  }) {}
+
+  @override
+  void error(
+    dynamic message, {
+    Exception? exception,
+    List<dynamic> args = const [],
+  }) {}
+}
+
 class Logger implements AbstractLogger {
   static const String _reset = "\u001b[0m";
   static const String _cyan = "\u001b[36m";

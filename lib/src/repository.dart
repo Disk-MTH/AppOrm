@@ -1,26 +1,43 @@
 import 'package:app_orm/src/entity.dart';
+import 'package:app_orm/src/entity_manager.dart';
 import 'package:app_orm/src/identifiable.dart';
 import 'package:dart_appwrite/models.dart';
 
-class Repository extends Identifiable {
-  final Type type;
-  final List<Entity> _entities = [];
+import 'annotations.dart';
 
-  Repository(this.type, Collection collection) : super(collection) {}
+class Repository<T extends Entity> extends Identifiable<Collection> {
+  final EntityManager entityManager;
 
-  List<Entity> list() {
-    return _entities;
-  }
+  @OrmNative()
+  late final String databaseId;
 
-  void add(Entity entity) {
-    if (entity.runtimeType != type) {
-      throw "Invalid entity type: ${entity.runtimeType} for repository: $type";
-    }
+  @OrmNative()
+  late final String name;
 
-    _entities.add(entity);
-  }
+  @OrmNative()
+  late final bool enabled;
 
-  void remove(Entity entity) {
-    _entities.remove(entity);
+  @OrmNative()
+  late final bool documentSecurity;
+
+  //TODO: review this
+  /*@OrmNative()
+  late final List<Index> indexes;*/
+
+  @OrmNative($prefix: true)
+  late final List permissions;
+
+  final Type type = T;
+
+  Repository(this.entityManager, Collection collection) : super(collection);
+
+  Future<List<T>> list() async {
+    /*entityManager.logger.log("Listing ${T.toString()}");
+
+    for (var key in entityManager.databases.) {
+      print('Key: $key, Value: ${collection.toMap()[key]}');
+    }*/
+
+    return [];
   }
 }
