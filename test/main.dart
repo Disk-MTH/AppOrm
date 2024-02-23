@@ -23,12 +23,18 @@ void main() async {
     logger,
   );
 
-  print(entityManager.toMap());
-
   final addressRepo = await entityManager.getRepository<Address>();
-  final userRepo = await entityManager.getRepository<User>();
 
-  addressRepo.list().then((value) => print(value));
+  final List<Address> addresses = await addressRepo.list();
+  for (var address in addresses) {
+    print(address.toMap());
+  }
+
+  final userRepo = await entityManager.getRepository<User>();
+  final List<User> users = await userRepo.list();
+  for (var user in users) {
+    print(user.toMap());
+  }
 
   logger.log("Finished");
   exit(0);
@@ -39,7 +45,7 @@ class Address extends Entity {
   late String _city;
   get city => _city;
 
-  Address(super.document);
+  Address(super.entityManager, super.document);
 }
 
 class User extends Entity {
@@ -51,5 +57,5 @@ class User extends Entity {
   late Address _address;
   get address => _address;
 
-  User(super.model);
+  User(super.entityManager, super.model);
 }

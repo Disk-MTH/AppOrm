@@ -84,11 +84,10 @@ class Reflection {
     reflect(instance).setField(mirror.simpleName, value);
   }
 
-  static I instantiate<I>(
-    Type type, {
+  static I instantiate<I>({
     String constructor = "",
     List<dynamic> args = const [],
   }) {
-    return reflectClass(type).newInstance(Symbol(constructor), args).reflectee;
+    return reflectClass(I).newInstance(Symbol(constructor), args).reflectee;
   }
 }
