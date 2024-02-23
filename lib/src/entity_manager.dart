@@ -163,7 +163,22 @@ class EntityManager extends Identifiable {
         annotation.validate();
 
         if (annotation.runtimeType == OrmEntity) {
-          //TODO
+          print('######');
+
+          final String? refDocId = documentsByType[entity.runtimeType]!
+              .where((e) => e.$id == entity.id)
+              .firstOrNull
+              ?.data["orm${mirror.type.reflectedType}Id"];
+
+          final Document? refDoc = documentsByType[mirror.type.reflectedType]!
+              .where((e) => e.$id == refDocId)
+              .firstOrNull;
+
+          if (refDoc == null) {
+            throw "Entity reference \"$name\" not found";
+          }
+
+          Reflection.setFieldValue(entity, mirror, entitiesById[refDoc.$id]!);
         }
       });
     }

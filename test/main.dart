@@ -22,6 +22,8 @@ void main() async {
   await entityManager.initialize([Address, User]);
   await entityManager.pull();
 
+  logger.warn(entityManager.repositories);
+
   entityManager.logger.log("Finished");
   exit(0);
 
