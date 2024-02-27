@@ -5,6 +5,7 @@ import 'package:app_orm/src/annotations.dart';
 import 'package:app_orm/src/app_orm.dart';
 import 'package:app_orm/src/entity.dart';
 import 'package:app_orm/src/logger.dart';
+import 'package:app_orm/src/serializable.dart';
 import 'package:dart_appwrite/dart_appwrite.dart';
 
 void main() async {
@@ -17,11 +18,8 @@ void main() async {
   final databases = Databases(backend);
 
   final AbstractLogger logger = Logger();
-  final AppOrm appOrm = AppOrm(
-    "65d4bcc6bfbefe3e6b61",
-    databases,
-    logger: logger,
-  );
+  Serializable.logger = logger;
+  final AppOrm appOrm = AppOrm("65d4bcc6bfbefe3e6b61", databases);
 
   await appOrm.setup();
 
@@ -30,16 +28,16 @@ void main() async {
     // "65d5e0e793d9f2e4c538",
   ]);
 
-  for (var address in addresses) {
+/*  for (var address in addresses) {
     // print(address.serialize());
     address.debug();
-  }
+  }*/
 
   final List<User> users = await appOrm.list();
 
   for (var user in users) {
     // print(user.serialize());
-    user.debug();
+    logger.debug(user);
   }
 
   /*final Repository<Address> addressRepo = appOrm.getRepository<Address>();
@@ -94,11 +92,14 @@ class User extends Entity<User> {
   @OrmEntity(type: Address)
   late Address _home;
 
-  User.empty() : super.empty();
+  @OrmEntity(type: Address)
+  late Address _work;
 
-  // User.construct() : super.construct();
+  User.empty() : super.empty();
 
   get name => _name;
 
-  get address => _home;
+  get home => _home;
+
+  get work => _work;
 }

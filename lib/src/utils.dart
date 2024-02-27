@@ -3,7 +3,7 @@ import "dart:math";
 import "dart:mirrors";
 
 import "package:app_orm/src/reflected_variable.dart";
-import "package:dart_appwrite/models.dart";
+import "package:app_orm/src/serializable.dart";
 
 class Utils {
   static final Random random = Random(DateTime.now().millisecondsSinceEpoch);
@@ -15,12 +15,9 @@ class Utils {
   }
 
   static String beautify(dynamic input) {
-    if (input is Model) input = input.toMap();
-    if (input is List<Model>) input = input.map((e) => e.toMap()).toList();
-
-    return input is Map<String, dynamic> || input is List<Map<String, dynamic>>
-        ? "\n${JsonEncoder.withIndent("  ").convert(input)}"
-        : input.toString();
+    return input is Serializable
+        ? "${input.runtimeType}\n${JsonEncoder.withIndent("  ").convert(input.serialize())}"
+        : input;
   }
 }
 

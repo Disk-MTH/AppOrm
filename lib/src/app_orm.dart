@@ -1,5 +1,4 @@
 import "package:app_orm/src/entity.dart";
-import "package:app_orm/src/logger.dart";
 import "package:app_orm/src/utils.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
 import "package:dart_appwrite/models.dart";
@@ -8,9 +7,6 @@ import "annotations.dart";
 import "identifiable.dart";
 
 class AppOrm extends Identifiable<AppOrm> {
-  static AbstractLogger _logger = DummyLogger();
-  static get logger => _logger;
-
   @OrmNative()
   late String? name;
 
@@ -22,12 +18,9 @@ class AppOrm extends Identifiable<AppOrm> {
   final String _databaseId;
   final Map<String, String> _collections = {};
 
-  AppOrm(this._databaseId, this.databases, {AbstractLogger? logger})
-      : super.empty() {
-    if (logger != null) _logger = logger;
-  }
+  AppOrm(this._databaseId, this.databases) : super.empty();
 
-  Future<void> setup(/*List<Repository> repositories*/) async {
+  Future<void> setup() async {
     deserialize((await databases.get(databaseId: _databaseId)).toMap());
 
     logger.debug("Initializing entity manager: {}", args: [id]);
@@ -39,29 +32,6 @@ class AppOrm extends Identifiable<AppOrm> {
     });
 
     logger.debug("Collections found: {}", args: [_collections.length]);
-
-    // initialize(await databases.get(databaseId: _databaseId));
-
-    /*logger.debug("Initializing entity manager: $id");
-
-    final List<Collection> collections = await databases
-        .listCollections(databaseId: id)
-        .then((value) => value.collections);
-
-    logger.debug("Collections found: {}", args: [collections.length]);
-
-    for (var repository in repositories) {
-      // repository.initialize(
-      //   collections.firstWhere((e) => e.name == repository.type.toString()),
-      // );
-      Reflection.setFieldValue(repository, this, name: "appOrm");
-
-      logger.debug(
-        "Repository mapped: {} with {}",
-        args: [repository.name, repository.id],
-      );
-      _repositories.add(repository);
-    }*/
   }
 
   Future<List<T>> list<T extends Entity>({
@@ -96,7 +66,6 @@ class AppOrm extends Identifiable<AppOrm> {
 
       entities.add(
         Reflection.instantiate(T, constructor: "empty").deserialize(data),
-        // Reflection.instantiate<T>(constructor: "empty").deserialize(data),
       );
     }
 

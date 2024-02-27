@@ -2,14 +2,12 @@ import "dart:mirrors";
 
 import "package:app_orm/src/serializable.dart";
 import "package:app_orm/src/utils.dart";
-import "package:dart_appwrite/models.dart";
 
 import "annotations.dart";
 import "logger.dart";
 
 class Identifiable<T> implements Serializable<T> {
-  // late final AbstractLogger logger;
-  // final AbstractLogger logger = Serializable.logger;
+  final AbstractLogger logger = Serializable.logger;
 
   @OrmNative($prefix: true)
   late String? id;
@@ -21,7 +19,6 @@ class Identifiable<T> implements Serializable<T> {
   late String? updatedAt;
 
   Identifiable.empty() {
-    logger = Serializable.logger;
     Reflection.listClassFields(runtimeType).forEach((name, mirror) {
       final OrmNative? annotation = mirror.metadata
           .where((e) => e.reflectee is OrmNative)
@@ -38,9 +35,9 @@ class Identifiable<T> implements Serializable<T> {
   @override
   Map<String, dynamic> serialize() {
     return Reflection.listInstanceFields(this).map((key, value) {
-      if (value.value is Model) {
+      if (value.value is Serializable) {
         return MapEntry(key, value.value.serialize());
-      } else if (value.value is List<Model>) {
+      } else if (value.value is List<Serializable>) {
         return MapEntry(key, value.value.map((e) => e.serialize()).toList());
       }
       return MapEntry(key, value.value.toString());
@@ -49,11 +46,6 @@ class Identifiable<T> implements Serializable<T> {
 
   @override
   T deserialize(Map<String, dynamic> data) {
-    final Logger logger = Logger();
-
-    // logger.log(runtimeType);
-    // logger.log(data);
-
     Reflection.listClassFields(runtimeType).forEach((name, mirror) {
       final InstanceMirror? metadata =
           mirror.metadata.where((e) => e.reflectee is OrmAttribute).firstOrNull;
@@ -81,22 +73,5 @@ class Identifiable<T> implements Serializable<T> {
       Reflection.setFieldValue(this, value, mirror: mirror);
     });
     return this as T;
-  }
-
-  void debug() {
-    //transform the whole objets and his sub-bjects to a map recursively
-
-    final Map<String, dynamic> data = serialize();
-
-    while (data.values.any((e) => e is Serializable)) {
-      print('#####');
-      data.forEach((key, value) {
-        if (value is Serializable) {
-          data[key] = value.serialize();
-        }
-      });
-    }
-
-    logger.debug(data);
   }
 }
