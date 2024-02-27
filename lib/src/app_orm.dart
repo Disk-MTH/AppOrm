@@ -1,52 +1,48 @@
+import "package:app_orm/src/entity.dart";
 import "package:app_orm/src/logger.dart";
-import "package:app_orm/src/repository.dart";
 import "package:app_orm/src/utils.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
 import "package:dart_appwrite/models.dart";
 
 import "annotations.dart";
-import "entity.dart";
 import "identifiable.dart";
 
-class AppOrm extends Identifiable {
-  @OrmNative()
-  late final String name;
+class AppOrm extends Identifiable<AppOrm> {
+  static AbstractLogger _logger = DummyLogger();
+  static get logger => _logger;
 
   @OrmNative()
-  late final bool enabled;
+  late String? name;
+
+  @OrmNative()
+  late bool? enabled;
 
   final Databases databases;
-  final AbstractLogger logger;
 
   final String _databaseId;
-  final List<Repository> _repositories = [];
+  final Map<String, String> _collections = {};
 
-  AppOrm(this._databaseId, this.databases, {this.logger = const DummyLogger()});
+  AppOrm(this._databaseId, this.databases, {AbstractLogger? logger})
+      : super.empty() {
+    if (logger != null) _logger = logger;
+  }
 
-/*  static Future<AppOrm> create(
-    Databases databases,
-    String databaseId, [
-    AbstractLogger? logger,
-    DataStorage? data,
-  ]) async {
-    return AppOrm._(
-      logger ?? DummyLogger(),
-      databases,
-      data ?? Memory(),
-      await databases.get(databaseId: databaseId),
-    );
-  }*/
+  Future<void> setup(/*List<Repository> repositories*/) async {
+    deserialize((await databases.get(databaseId: _databaseId)).toMap());
 
-/*  Future<Repository<T>> register<T extends Entity>(
-      Repository<T> repository) async {
-    data.register(repository);
-    return repository;
-  }*/
+    logger.debug("Initializing entity manager: {}", args: [id]);
 
-  Future<void> setup(List<Repository> repositories) async {
-    initialize(await databases.get(databaseId: _databaseId));
+    await databases.listCollections(databaseId: id!).then((value) {
+      for (var collection in value.collections) {
+        _collections[collection.name] = collection.$id;
+      }
+    });
 
-    logger.debug("Initializing entity manager: $id");
+    logger.debug("Collections found: {}", args: [_collections.length]);
+
+    // initialize(await databases.get(databaseId: _databaseId));
+
+    /*logger.debug("Initializing entity manager: $id");
 
     final List<Collection> collections = await databases
         .listCollections(databaseId: id)
@@ -55,9 +51,9 @@ class AppOrm extends Identifiable {
     logger.debug("Collections found: {}", args: [collections.length]);
 
     for (var repository in repositories) {
-      repository.initialize(
-        collections.firstWhere((e) => e.name == repository.type.toString()),
-      );
+      // repository.initialize(
+      //   collections.firstWhere((e) => e.name == repository.type.toString()),
+      // );
       Reflection.setFieldValue(repository, this, name: "appOrm");
 
       logger.debug(
@@ -65,8 +61,89 @@ class AppOrm extends Identifiable {
         args: [repository.name, repository.id],
       );
       _repositories.add(repository);
-    }
+    }*/
   }
+
+  Future<List<T>> list<T extends Entity>({
+    Type? type,
+    List<String> ids = const [],
+  }) async {
+    if (type != null && type != T) {
+      throw "Type and generic type mismatch";
+    }
+
+    type ??= T;
+
+    logger.debug("Listing {}: {}", args: [type, ids.isEmpty ? "all" : ids]);
+
+    final List<T> entities = [];
+    final List<Document> documents = await listDocuments(
+      type.toString(),
+      ids: ids,
+    );
+
+    for (var document in documents) {
+      final data = document.data;
+
+      for (var key in List<String>.from(data.keys)) {
+        if (key.contains("_ORMID_")) {
+          final List<String> fieldData = key.split("_ORMID_");
+
+          data[fieldData.first] =
+              (await listDocuments(fieldData.last, ids: [data[key]]))[0].data;
+        }
+      }
+
+      entities.add(
+        Reflection.instantiate(T, constructor: "empty").deserialize(data),
+        // Reflection.instantiate<T>(constructor: "empty").deserialize(data),
+      );
+    }
+
+    return entities;
+  }
+
+  Future<List<Document>> listDocuments(
+    String typeName, {
+    List<String> ids = const [],
+  }) {
+    if (!_collections.containsKey(typeName)) {
+      throw "Collection not found for type \"$typeName\"";
+    }
+
+    logger.debug(
+      "Listing documents for {}: {}",
+      args: [typeName, ids.isEmpty ? "all" : ids],
+    );
+
+    return databases.listDocuments(
+      databaseId: id!,
+      collectionId: _collections[typeName]!,
+      queries: [
+        if (ids.isNotEmpty) Query.equal("\$id", ids),
+      ],
+    ).then((value) => value.documents);
+  }
+
+/*  Future<T> get<T extends Entity>(String id) async {
+    if (!_collections.containsKey(T.toString())) {
+      throw "Collection not found for type \"$T\"";
+    }
+
+    logger.debug("Getting $T: $id");
+
+    final Document document = await databases.getDocument(
+      databaseId: this.id!,
+      collectionId: _collections[T.toString()]!,
+      documentId: id,
+    );
+
+    print("###########");
+    print(document.data["documents"]);
+
+    return Reflection.instantiate<T>(constructor: "empty")
+        .deserialize(document.data);
+  }*/
 
   /*Future<void> pull() async {
     logger.debug("Pulling data...");
@@ -129,7 +206,7 @@ class AppOrm extends Identifiable {
   }
   }*/
 
-  Repository<T> getRepository<T extends Entity>() {
+/*  Repository<T> getRepository<T extends Entity>() {
     final Repository<T>? repository = _repositories
         .where(
           (e) => e.type == T,
@@ -141,5 +218,23 @@ class AppOrm extends Identifiable {
     }
 
     return repository;
+  }*/
+
+/*  Repository getRepositoryByType(Type type) {
+    final Repository? repository = _repositories
+        .where(
+          (e) => e.type == type,
+        )
+        .firstOrNull;
+
+    if (repository == null) {
+      throw "Repository not found for type \"$type\"";
+    }
+
+    return repository;
   }
+
+  Repository<T> getRepository<T extends Entity>() {
+    return getRepositoryByType(T) as Repository<T>;
+  }*/
 }

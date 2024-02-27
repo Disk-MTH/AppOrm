@@ -82,10 +82,15 @@ class Reflection {
     );
   }
 
-  static I instantiate<I>({
+  static dynamic instantiate(
+    Type type, {
     String constructor = "",
     List<dynamic> args = const [],
   }) {
-    return reflectClass(I).newInstance(Symbol(constructor), args).reflectee;
+    return reflectClass(type).newInstance(Symbol(constructor), args).reflectee;
+  }
+
+  static Type typeByName(String typeName) {
+    return MirrorSystem.getSymbol(typeName).runtimeType;
   }
 }

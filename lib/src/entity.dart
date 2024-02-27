@@ -1,25 +1,25 @@
-import "dart:mirrors";
-
 import "package:app_orm/src/annotations.dart";
 import "package:app_orm/src/identifiable.dart";
-import "package:app_orm/src/utils.dart";
-import "package:dart_appwrite/models.dart";
 
-abstract class Entity extends Identifiable<Document> {
+abstract class Entity<T> extends Identifiable<T> {
   @OrmNative($prefix: true)
-  late final String databaseId;
+  late String? databaseId;
 
   @OrmNative($prefix: true)
-  late final String collectionId;
+  late String? collectionId;
 
   //TODO: review this
   @OrmNative($prefix: true)
-  late final List permissions;
+  late List? permissions;
+
+  Entity.empty() : super.empty();
+
+  // Entity.construct() : super.construct();
 
   //late final AppOrm appOrm;
 
-  Entity(Document document) {
-    initialize(document);
+  /*Entity(Document document) {
+    // initialize(document);
     Reflection.listClassFields(runtimeType).forEach((name, mirror) {
       final InstanceMirror? metadata = mirror.metadata
           .where(
@@ -43,7 +43,7 @@ abstract class Entity extends Identifiable<Document> {
       }
       Reflection.setFieldValue(this, value, mirror: mirror);
     });
-  }
+  }*/
 
 //TODO: Test this method
 /*  static T mutate<T extends Entity>(T entity, Map<String, dynamic> data) {
