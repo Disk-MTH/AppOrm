@@ -55,22 +55,37 @@ class Identifiable<T> implements Serializable<T> {
       final OrmAttribute annotation = metadata.reflectee;
       annotation.validate();
 
-      dynamic value = annotation is OrmNative
-          ? data[annotation.$prefix ? "\$$name" : name]
-          : data[name.substring(1)];
+      name = annotation is OrmNative
+          ? (annotation.$prefix ? "\$$name" : name)
+          : name.substring(1);
+
+      dynamic value = data[name];
 
       if (value == null && (annotation.isRequired || annotation.isArray)) {
         throw "Field \"$name\" is not nullable";
       }
 
-      if (annotation is OrmEntity) {
-        value = Reflection.instantiate(
-          mirror.type.reflectedType,
-          constructor: "empty",
-        ).deserialize(value);
-      }
+      if (annotation is OrmEntities) {
+        final relatedEntities = Reflection.getField(this, name);
 
-      Reflection.setFieldValue(this, value, mirror: mirror);
+        value.forEach((e) {
+          relatedEntities.add(
+            Reflection.instantiate(
+              mirror.type.typeArguments.first.reflectedType,
+              constructor: "empty",
+            ).deserialize(e),
+          );
+        });
+      } else {
+        if (annotation is OrmEntity) {
+          value = Reflection.instantiate(
+            mirror.type.reflectedType,
+            constructor: "empty",
+          ).deserialize(value);
+        }
+
+        Reflection.setFieldValue(this, value, mirror: mirror);
+      }
     });
     return this as T;
   }

@@ -64,11 +64,14 @@ class OrmNative extends OrmAttribute {
 }
 
 class OrmEntity extends OrmAttribute {
-  final Type type;
-
   const OrmEntity({
     super.isRequired = true,
-    required this.type,
+  });
+}
+
+class OrmEntities extends OrmAttribute {
+  const OrmEntities({
+    super.isArray = true,
   });
 }
 

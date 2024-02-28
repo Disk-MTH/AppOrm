@@ -26,7 +26,7 @@ class Reflection {
     ClassMirror? cm = reflectClass(type);
 
     while (cm != null && cm != reflectClass(Object)) {
-      if (cm == reflectClass(T)) {
+      if (cm.runtimeType == reflectClass(T).runtimeType) {
         return true;
       }
       cm = cm.superclass;
@@ -63,8 +63,12 @@ class Reflection {
     return fields;
   }
 
+  static dynamic getField(dynamic instance, String name) {
+    return reflect(instance).getField(Symbol(name)).reflectee;
+  }
+
   static void setFieldValue(
-    Object instance,
+    dynamic instance,
     dynamic value, {
     String? name,
     VariableMirror? mirror,

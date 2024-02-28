@@ -23,50 +23,20 @@ void main() async {
 
   await appOrm.setup();
 
-  final List<Address> addresses = await appOrm.list(ids: [
+/*  final List<Address> addresses = await appOrm.list(ids: [
     // "65d5167ebb7ac240e08f",
     // "65d5e0e793d9f2e4c538",
-  ]);
+  ]);*/
 
 /*  for (var address in addresses) {
-    // print(address.serialize());
     address.debug();
   }*/
 
-  final List<User> users = await appOrm.list();
+  final users = await appOrm.list<User>();
 
   for (var user in users) {
-    // print(user.serialize());
     logger.debug(user);
   }
-
-  /*final Repository<Address> addressRepo = appOrm.getRepository<Address>();
-  final List<Address> addresses = await addressRepo.list();
-
-  for (var address in addresses) {
-    print(address.toMap());
-  }
-
-  final Repository<User> userRepo = appOrm.getRepository<User>();
-  final List<User> users = await userRepo.list();
-
-  for (var user in users) {
-    print(user.toMap());
-  }*/
-
-/*  final Map<String, dynamic> data = await databases
-      .getDocument(
-        databaseId: "65d4bcc6bfbefe3e6b61",
-        collectionId: "65d4e66e94ab54bff4bf",
-        documentId: "65d5e0e793d9f2e4c538",
-      )
-      .then((value) => value.data);
-
-  final Address identifiable = Address.empty().deserialize(data);
-
-  final Address identifiable = Address("Test");
-
-  print(identifiable.serialize());*/
 
   logger.log("Finished");
   exit(0);
@@ -82,18 +52,21 @@ class Address extends Entity<Address> {
 
   get city => _city;
 
-  set setCity(String value) => _city = value;
+  // set setCity(String value) => _city = value;
 }
 
 class User extends Entity<User> {
   @OrmString(isRequired: true, maxLength: 100)
   late String _name;
 
-  @OrmEntity(type: Address)
+  @OrmEntity()
   late Address _home;
 
-  @OrmEntity(type: Address)
+  @OrmEntity()
   late Address _work;
+
+  @OrmEntities()
+  final List<Address> _holidays = [];
 
   User.empty() : super.empty();
 
@@ -102,4 +75,6 @@ class User extends Entity<User> {
   get home => _home;
 
   get work => _work;
+
+  get holidays => _holidays;
 }

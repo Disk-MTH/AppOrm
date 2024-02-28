@@ -20,10 +20,18 @@ class AppOrm extends Identifiable<AppOrm> {
 
   AppOrm(this._databaseId, this.databases) : super.empty();
 
-  Future<void> setup() async {
+  Future<void> setup({bool preLoadSkeleton = true}) async {
+    logger.debug("Setting up AppOrm...");
+
     deserialize((await databases.get(databaseId: _databaseId)).toMap());
 
-    logger.debug("Initializing entity manager: {}", args: [id]);
+    logger.debug("AppOrm mapped to: {}", args: [id]);
+
+    if (preLoadSkeleton) await loadSkeleton();
+  }
+
+  Future<void> loadSkeleton() async {
+    _collections.clear();
 
     await databases.listCollections(databaseId: id!).then((value) {
       for (var collection in value.collections) {
@@ -31,24 +39,21 @@ class AppOrm extends Identifiable<AppOrm> {
       }
     });
 
-    logger.debug("Collections found: {}", args: [_collections.length]);
+    logger.debug(
+      "{} collections found: {}",
+      args: [_collections.length, _collections.keys],
+    );
   }
 
   Future<List<T>> list<T extends Entity>({
-    Type? type,
+    bool loadArchitecture = false,
     List<String> ids = const [],
   }) async {
-    if (type != null && type != T) {
-      throw "Type and generic type mismatch";
-    }
-
-    type ??= T;
-
-    logger.debug("Listing {}: {}", args: [type, ids.isEmpty ? "all" : ids]);
+    logger.debug("Listing {}: {}", args: [T, ids.isEmpty ? "all" : ids]);
 
     final List<T> entities = [];
-    final List<Document> documents = await listDocuments(
-      type.toString(),
+    final List<Document> documents = await _listDocuments(
+      T.toString(),
       ids: ids,
     );
 
@@ -59,8 +64,18 @@ class AppOrm extends Identifiable<AppOrm> {
         if (key.contains("_ORMID_")) {
           final List<String> fieldData = key.split("_ORMID_");
 
-          data[fieldData.first] =
-              (await listDocuments(fieldData.last, ids: [data[key]]))[0].data;
+          if (data[key] is List) {
+            data[fieldData.first] = [];
+            for (var id in data[key]) {
+              data[fieldData.first].add(
+                (await _listDocuments(fieldData.last, ids: [id]))[0].data,
+              );
+            }
+          } else {
+            data[fieldData.first] =
+                (await _listDocuments(fieldData.last, ids: [data[key]]))[0]
+                    .data;
+          }
         }
       }
 
@@ -72,7 +87,7 @@ class AppOrm extends Identifiable<AppOrm> {
     return entities;
   }
 
-  Future<List<Document>> listDocuments(
+  Future<List<Document>> _listDocuments(
     String typeName, {
     List<String> ids = const [],
   }) {
@@ -81,7 +96,7 @@ class AppOrm extends Identifiable<AppOrm> {
     }
 
     logger.debug(
-      "Listing documents for {}: {}",
+      "Retrieving documents for {}: {}",
       args: [typeName, ids.isEmpty ? "all" : ids],
     );
 
@@ -93,117 +108,4 @@ class AppOrm extends Identifiable<AppOrm> {
       ],
     ).then((value) => value.documents);
   }
-
-/*  Future<T> get<T extends Entity>(String id) async {
-    if (!_collections.containsKey(T.toString())) {
-      throw "Collection not found for type \"$T\"";
-    }
-
-    logger.debug("Getting $T: $id");
-
-    final Document document = await databases.getDocument(
-      databaseId: this.id!,
-      collectionId: _collections[T.toString()]!,
-      documentId: id,
-    );
-
-    print("###########");
-    print(document.data["documents"]);
-
-    return Reflection.instantiate<T>(constructor: "empty")
-        .deserialize(document.data);
-  }*/
-
-  /*Future<void> pull() async {
-    logger.debug("Pulling data...");
-
-    final Map<Type, List<Document>> documentsByType = {};
-    final Map<String, Entity> entitiesById = {};
-
-    for (var repository in _repositories) {
-      final List<Document> documents = await databases
-          .listDocuments(databaseId: id, collectionId: repository.id)
-          .then((value) => value.documents);
-
-      documentsByType[repository.type] = documents;
-
-      logger.debug(
-        "Documents found for {}: {}",
-        args: [repository.type.toString(), documents.length],
-      );
-      logger.debug(
-        "Instantiating {} {}",
-        args: [documents.length, repository.type],
-      );
-
-      for (var document in documents) {
-        final Entity entity = Reflection.instantiate<Entity>(args: [document]);
-        repository.add(entity);
-        entitiesById[entity.id] = entity;
-      }
-    }
-
-    for (var entity in entitiesById.values) {
-      Reflection.listClassFields(entity.runtimeType).forEach((name, mirror) {
-        final InstanceMirror? metadata = mirror.metadata
-            .where((e) => e.reflectee is OrmAttribute)
-            .firstOrNull;
-
-        if (metadata == null) return;
-
-        final OrmAttribute annotation = metadata.reflectee;
-        annotation.validate();
-
-        if (annotation.runtimeType == OrmEntity) {
-          final String? refDocId = documentsByType[entity.runtimeType]!
-              .where((e) => e.$id == entity.id)
-              .firstOrNull
-              ?.data["orm${mirror.type.reflectedType}Id"];
-
-          final Document? refDoc = documentsByType[mirror.type.reflectedType]!
-              .where((e) => e.$id == refDocId)
-              .firstOrNull;
-
-          if (refDoc == null) {
-            throw "Entity reference \"$name\" not found";
-          }
-
-          Reflection.setFieldValue(entity, mirror, entitiesById[refDoc.$id]!);
-        }
-      });
-    }
-  }
-  }*/
-
-/*  Repository<T> getRepository<T extends Entity>() {
-    final Repository<T>? repository = _repositories
-        .where(
-          (e) => e.type == T,
-        )
-        .firstOrNull as Repository<T>?;
-
-    if (repository == null) {
-      throw "Repository not found for type \"$T\"";
-    }
-
-    return repository;
-  }*/
-
-/*  Repository getRepositoryByType(Type type) {
-    final Repository? repository = _repositories
-        .where(
-          (e) => e.type == type,
-        )
-        .firstOrNull;
-
-    if (repository == null) {
-      throw "Repository not found for type \"$type\"";
-    }
-
-    return repository;
-  }
-
-  Repository<T> getRepository<T extends Entity>() {
-    return getRepositoryByType(T) as Repository<T>;
-  }*/
 }
