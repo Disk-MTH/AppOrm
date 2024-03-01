@@ -23,20 +23,18 @@ void main() async {
 
   await appOrm.setup();
 
-/*  final List<Address> addresses = await appOrm.list(ids: [
-    // "65d5167ebb7ac240e08f",
-    // "65d5e0e793d9f2e4c538",
-  ]);*/
+  final List<Address> addresses = await appOrm.pull();
+  logger.debug(addresses);
 
-/*  for (var address in addresses) {
-    address.debug();
-  }*/
+  logger.log("-----------------------------------------\n");
 
-  final users = await appOrm.list<User>();
+  final users = await appOrm.pull<User>();
+  logger.debug(users);
 
-  for (var user in users) {
-    logger.debug(user);
-  }
+  logger.log("-----------------------------------------\n");
+
+  final campuses = await appOrm.pull<Campus>();
+  logger.debug(campuses);
 
   logger.log("Finished");
   exit(0);
@@ -48,11 +46,7 @@ class Address extends Entity<Address> {
 
   Address.empty() : super.empty();
 
-  Address(this._city) : super.empty();
-
   get city => _city;
-
-  // set setCity(String value) => _city = value;
 }
 
 class User extends Entity<User> {
@@ -63,10 +57,7 @@ class User extends Entity<User> {
   late Address _home;
 
   @OrmEntity()
-  late Address _work;
-
-  @OrmEntities()
-  final List<Address> _holidays = [];
+  late Campus _campus;
 
   User.empty() : super.empty();
 
@@ -74,7 +65,24 @@ class User extends Entity<User> {
 
   get home => _home;
 
-  get work => _work;
+  get campus => _campus;
+}
 
-  get holidays => _holidays;
+class Campus extends Entity<Campus> {
+  @OrmString(isRequired: true, maxLength: 100)
+  late String _name;
+
+  @OrmEntity()
+  late Address _address;
+
+  @OrmEntities()
+  final List<User> _users = [];
+
+  Campus.empty() : super.empty();
+
+  get name => _name;
+
+  get address => _address;
+
+  get users => _users;
 }

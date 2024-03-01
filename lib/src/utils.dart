@@ -15,9 +15,14 @@ class Utils {
   }
 
   static String beautify(dynamic input) {
-    return input is Serializable
-        ? "${input.runtimeType}\n${JsonEncoder.withIndent("  ").convert(input.serialize())}"
-        : input;
+    if (input is Serializable) {
+      return "${input.runtimeType}\n${JsonEncoder.withIndent("  ").convert(input.serialize())}";
+    } else if (input is List<Serializable>) {
+      return "${input.runtimeType}\n${input.map((e) => beautify(e)).join("\n")}";
+    } else if (input is Map<String, dynamic>) {
+      return JsonEncoder.withIndent("  ").convert(input);
+    }
+    return input;
   }
 }
 

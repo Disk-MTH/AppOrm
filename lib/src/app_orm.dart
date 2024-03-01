@@ -1,3 +1,5 @@
+import "dart:mirrors";
+
 import "package:app_orm/src/entity.dart";
 import "package:app_orm/src/utils.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
@@ -20,14 +22,14 @@ class AppOrm extends Identifiable<AppOrm> {
 
   AppOrm(this._databaseId, this.databases) : super.empty();
 
-  Future<void> setup({bool preLoadSkeleton = true}) async {
+  Future<void> setup({bool preloadSkeleton = true}) async {
     logger.debug("Setting up AppOrm...");
 
     deserialize((await databases.get(databaseId: _databaseId)).toMap());
 
     logger.debug("AppOrm mapped to: {}", args: [id]);
 
-    if (preLoadSkeleton) await loadSkeleton();
+    if (preloadSkeleton) await loadSkeleton();
   }
 
   Future<void> loadSkeleton() async {
@@ -45,7 +47,7 @@ class AppOrm extends Identifiable<AppOrm> {
     );
   }
 
-  Future<List<T>> list<T extends Entity>({
+  Future<List<T>> pull<T extends Entity>({
     bool loadArchitecture = false,
     List<String> ids = const [],
   }) async {
@@ -58,30 +60,13 @@ class AppOrm extends Identifiable<AppOrm> {
     );
 
     for (var document in documents) {
-      final data = document.data;
+      final T entity = Reflection.instantiate(
+        T,
+        constructor: "empty",
+      ).deserialize(document.data);
 
-      for (var key in List<String>.from(data.keys)) {
-        if (key.contains("_ORMID_")) {
-          final List<String> fieldData = key.split("_ORMID_");
-
-          if (data[key] is List) {
-            data[fieldData.first] = [];
-            for (var id in data[key]) {
-              data[fieldData.first].add(
-                (await _listDocuments(fieldData.last, ids: [id]))[0].data,
-              );
-            }
-          } else {
-            data[fieldData.first] =
-                (await _listDocuments(fieldData.last, ids: [data[key]]))[0]
-                    .data;
-          }
-        }
-      }
-
-      entities.add(
-        Reflection.instantiate(T, constructor: "empty").deserialize(data),
-      );
+      await _fetchEntity(entity, []);
+      entities.add(entity);
     }
 
     return entities;
@@ -107,5 +92,49 @@ class AppOrm extends Identifiable<AppOrm> {
         if (ids.isNotEmpty) Query.equal("\$id", ids),
       ],
     ).then((value) => value.documents);
+  }
+
+  Future<void> _fetchEntity(
+    Identifiable origin,
+    List<Identifiable> references,
+  ) async {
+    final fields = Reflection.listClassFields(origin.runtimeType);
+
+    for (var name in fields.keys) {
+      final mirror = fields[name]!;
+
+      final InstanceMirror? metadata = mirror.metadata
+          .where((e) => e.reflectee is OrmEntity || e.reflectee is OrmEntities)
+          .firstOrNull;
+
+      if (metadata == null) continue;
+
+      final OrmAttribute annotation = metadata.reflectee;
+      annotation.validate();
+
+      name = "${name.substring(1)}_ORMID";
+
+      if (references.any((e) => e.id == origin.foreignKeys[name])) {
+        Reflection.setFieldValue(
+          origin,
+          references.firstWhere((e) => e.id == origin.foreignKeys[name]),
+          mirror: mirror,
+        );
+      } else {
+        final data = (await _listDocuments(
+          mirror.type.reflectedType.toString(),
+          ids: [origin.foreignKeys[name]!],
+        ))[0]
+            .data;
+
+        final entity = Reflection.instantiate(
+          mirror.type.reflectedType,
+          constructor: "empty",
+        ).deserialize(data);
+
+        await _fetchEntity(entity, [origin, ...references]);
+        await _fetchEntity(origin, [entity, ...references]);
+      }
+    }
   }
 }

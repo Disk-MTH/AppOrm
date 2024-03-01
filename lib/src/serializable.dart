@@ -1,4 +1,4 @@
-import 'logger.dart';
+import "logger.dart";
 
 abstract class Serializable<T> {
   static AbstractLogger logger = DummyLogger();

@@ -8,6 +8,7 @@ import "logger.dart";
 
 class Identifiable<T> implements Serializable<T> {
   final AbstractLogger logger = Serializable.logger;
+  final Map<String, String> foreignKeys = {};
 
   @OrmNative($prefix: true)
   late String? id;
@@ -35,11 +36,11 @@ class Identifiable<T> implements Serializable<T> {
   @override
   Map<String, dynamic> serialize() {
     return Reflection.listInstanceFields(this).map((key, value) {
-      if (value.value is Serializable) {
+      /*if (value.value is Serializable) {
         return MapEntry(key, value.value.serialize());
       } else if (value.value is List<Serializable>) {
         return MapEntry(key, value.value.map((e) => e.serialize()).toList());
-      }
+      }*/
       return MapEntry(key, value.value.toString());
     });
   }
@@ -47,8 +48,13 @@ class Identifiable<T> implements Serializable<T> {
   @override
   T deserialize(Map<String, dynamic> data) {
     Reflection.listClassFields(runtimeType).forEach((name, mirror) {
-      final InstanceMirror? metadata =
-          mirror.metadata.where((e) => e.reflectee is OrmAttribute).firstOrNull;
+      final InstanceMirror? metadata = mirror.metadata
+          .where((e) => e.reflectee
+                  is OrmAttribute /* &&
+              e.reflectee is! OrmEntity &&
+              e.reflectee is! OrmEntities*/
+              )
+          .firstOrNull;
 
       if (metadata == null) return;
 
@@ -59,13 +65,21 @@ class Identifiable<T> implements Serializable<T> {
           ? (annotation.$prefix ? "\$$name" : name)
           : name.substring(1);
 
+      name = annotation is OrmEntity || annotation is OrmEntities
+          ? "${name}_ORMID"
+          : name;
+
       dynamic value = data[name];
 
-      if (value == null && (annotation.isRequired || annotation.isArray)) {
+      if (value == null &&
+              (annotation.isRequired ||
+                  annotation.isArray) /* &&
+          annotation is! OrmEntity*/
+          ) {
         throw "Field \"$name\" is not nullable";
       }
 
-      if (annotation is OrmEntities) {
+      /*if (annotation is OrmEntities) {
         final relatedEntities = Reflection.getField(this, name);
 
         value.forEach((e) {
@@ -84,6 +98,12 @@ class Identifiable<T> implements Serializable<T> {
           ).deserialize(value);
         }
 
+        Reflection.setFieldValue(this, value, mirror: mirror);
+      }*/
+
+      if (annotation is OrmEntity || annotation is OrmEntities) {
+        foreignKeys[name] = value;
+      } else {
         Reflection.setFieldValue(this, value, mirror: mirror);
       }
     });
