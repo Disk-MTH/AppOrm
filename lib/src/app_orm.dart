@@ -1,6 +1,7 @@
 import "dart:mirrors";
 
 import "package:app_orm/src/entity.dart";
+import "package:app_orm/src/repository.dart";
 import "package:app_orm/src/utils.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
 import "package:dart_appwrite/models.dart";
@@ -18,7 +19,7 @@ class AppOrm extends Identifiable<AppOrm> {
   final Databases databases;
 
   final String _databaseId;
-  final Map<String, String> _collections = {};
+  final Map<String, Repository> _skeleton = {};
 
   AppOrm(this._databaseId, this.databases) : super.empty();
 
@@ -33,17 +34,18 @@ class AppOrm extends Identifiable<AppOrm> {
   }
 
   Future<void> loadSkeleton() async {
-    _collections.clear();
+    _skeleton.clear();
 
     await databases.listCollections(databaseId: id!).then((value) {
       for (var collection in value.collections) {
-        _collections[collection.name] = collection.$id;
+        //TODO: patch map to have all typed lists
+        _skeleton[collection.name] = Repository(collection.toMap());
       }
     });
 
     logger.debug(
       "{} collections found: {}",
-      args: [_collections.length, _collections.keys],
+      args: [_skeleton.length, _skeleton.keys],
     );
   }
 
@@ -72,13 +74,26 @@ class AppOrm extends Identifiable<AppOrm> {
     return entities;
   }
 
+  Repository getRepository({Type? type, String? typeName}) {
+    if ((type == null && typeName == null) ||
+        (type != null && typeName != null)) {
+      throw "You must provide either a type or a typeName";
+    }
+
+    if (type != null) typeName = type.toString();
+
+    if (!_skeleton.containsKey(typeName)) {
+      throw "Repository not found for type \"$typeName\"";
+    }
+
+    return _skeleton[typeName.toString()]!;
+  }
+
   Future<List<Document>> _listDocuments(
     String typeName, {
     List<String> ids = const [],
   }) {
-    if (!_collections.containsKey(typeName)) {
-      throw "Collection not found for type \"$typeName\"";
-    }
+    final Repository repository = getRepository(typeName: typeName);
 
     logger.debug(
       "Retrieving documents for {}: {}",
@@ -87,7 +102,7 @@ class AppOrm extends Identifiable<AppOrm> {
 
     return databases.listDocuments(
       databaseId: id!,
-      collectionId: _collections[typeName]!,
+      collectionId: repository.id!,
       queries: [
         if (ids.isNotEmpty) Query.equal("\$id", ids),
       ],

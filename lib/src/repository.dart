@@ -1,30 +1,31 @@
 import "package:app_orm/src/identifiable.dart";
-import "package:dart_appwrite/models.dart";
 
 import "annotations.dart";
 
 class Repository extends Identifiable {
   @OrmNative()
-  late final String databaseId;
+  late String? databaseId;
 
   @OrmNative()
-  late final String name;
+  late String? name;
 
   @OrmNative()
-  late final bool enabled;
+  late bool? enabled;
 
   @OrmNative()
-  late final bool documentSecurity;
+  late bool? documentSecurity;
 
   //TODO: review this
   @OrmNative()
-  late final List<Index> indexes;
+  late List? indexes;
 
   //TODO: review this
   @OrmNative($prefix: true)
-  late final List permissions;
+  late List? permissions;
 
-  Repository() : super.empty();
+  Repository(Map<String, dynamic> data) : super.empty() {
+    deserialize(data);
+  }
 
   /*Future<List<T>> list() async {
     appOrm.logger.debug("Listing entities: $name");
