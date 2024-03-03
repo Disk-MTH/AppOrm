@@ -1,11 +1,9 @@
-import 'package:app_orm/src/app_orm.dart';
-import 'package:app_orm/src/entity.dart';
-import 'package:app_orm/src/identifiable.dart';
-import 'package:dart_appwrite/models.dart';
+import "package:app_orm/src/identifiable.dart";
+import "package:dart_appwrite/models.dart";
 
-import 'annotations.dart';
+import "annotations.dart";
 
-class Repository<T extends Entity> extends Identifiable {
+class Repository extends Identifiable {
   @OrmNative()
   late final String databaseId;
 
@@ -26,11 +24,7 @@ class Repository<T extends Entity> extends Identifiable {
   @OrmNative($prefix: true)
   late final List permissions;
 
-  final Type type = T;
-  final List<T> _entities = [];
-  late final AppOrm appOrm;
-
-  Repository() : super.construct();
+  Repository() : super.empty();
 
   /*Future<List<T>> list() async {
     appOrm.logger.debug("Listing entities: $name");
@@ -83,7 +77,7 @@ class Repository<T extends Entity> extends Identifiable {
         args: [document],
       );
 
-      print('@@@@@');
+      print("@@@@@");
       final fields = Reflection.listClassFields(T);
       for (var name in fields.keys) {
         final mirror = fields[name]!;
@@ -140,7 +134,7 @@ class Repository<T extends Entity> extends Identifiable {
     final Document document = await appOrm.databases.createDocument(
       databaseId: databaseId,
       collectionId: id,
-      documentId: '',
+      documentId: "",
       data: entity.toMap(),
     );
 

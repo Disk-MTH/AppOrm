@@ -1,4 +1,5 @@
 import "package:app_orm/src/annotations.dart";
+import "package:app_orm/src/app_orm.dart";
 import "package:app_orm/src/identifiable.dart";
 
 abstract class Entity<T> extends Identifiable<T> {

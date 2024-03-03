@@ -8,7 +8,7 @@ import "logger.dart";
 
 class Identifiable<T> implements Serializable<T> {
   final AbstractLogger logger = Serializable.logger;
-  final Map<String, String> foreignKeys = {};
+  final Map<String, List<String>> foreignKeys = {};
 
   @OrmNative($prefix: true)
   late String? id;
@@ -33,6 +33,7 @@ class Identifiable<T> implements Serializable<T> {
     });
   }
 
+  //TODO patch for cyclic references
   @override
   Map<String, dynamic> serialize() {
     return Reflection.listInstanceFields(this).map((key, value) {
@@ -48,13 +49,8 @@ class Identifiable<T> implements Serializable<T> {
   @override
   T deserialize(Map<String, dynamic> data) {
     Reflection.listClassFields(runtimeType).forEach((name, mirror) {
-      final InstanceMirror? metadata = mirror.metadata
-          .where((e) => e.reflectee
-                  is OrmAttribute /* &&
-              e.reflectee is! OrmEntity &&
-              e.reflectee is! OrmEntities*/
-              )
-          .firstOrNull;
+      final InstanceMirror? metadata =
+          mirror.metadata.where((e) => e.reflectee is OrmAttribute).firstOrNull;
 
       if (metadata == null) return;
 
@@ -63,7 +59,7 @@ class Identifiable<T> implements Serializable<T> {
 
       name = annotation is OrmNative
           ? (annotation.$prefix ? "\$$name" : name)
-          : name.substring(1);
+          : name;
 
       name = annotation is OrmEntity || annotation is OrmEntities
           ? "${name}_ORMID"
@@ -71,38 +67,14 @@ class Identifiable<T> implements Serializable<T> {
 
       dynamic value = data[name];
 
-      if (value == null &&
-              (annotation.isRequired ||
-                  annotation.isArray) /* &&
-          annotation is! OrmEntity*/
-          ) {
+      if (value == null && (annotation.isRequired || annotation.isArray)) {
         throw "Field \"$name\" is not nullable";
       }
 
-      /*if (annotation is OrmEntities) {
-        final relatedEntities = Reflection.getField(this, name);
-
-        value.forEach((e) {
-          relatedEntities.add(
-            Reflection.instantiate(
-              mirror.type.typeArguments.first.reflectedType,
-              constructor: "empty",
-            ).deserialize(e),
-          );
-        });
-      } else {
-        if (annotation is OrmEntity) {
-          value = Reflection.instantiate(
-            mirror.type.reflectedType,
-            constructor: "empty",
-          ).deserialize(value);
-        }
-
-        Reflection.setFieldValue(this, value, mirror: mirror);
-      }*/
-
-      if (annotation is OrmEntity || annotation is OrmEntities) {
-        foreignKeys[name] = value;
+      if (annotation is OrmEntity) {
+        foreignKeys[name] = [value];
+      } else if (annotation is OrmEntities) {
+        foreignKeys[name] = value.cast<String>();
       } else {
         Reflection.setFieldValue(this, value, mirror: mirror);
       }

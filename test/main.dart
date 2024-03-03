@@ -23,7 +23,7 @@ void main() async {
 
   await appOrm.setup();
 
-  final List<Address> addresses = await appOrm.pull();
+/*  final List<Address> addresses = await appOrm.pull();
   logger.debug(addresses);
 
   logger.log("-----------------------------------------\n");
@@ -31,7 +31,7 @@ void main() async {
   final users = await appOrm.pull<User>();
   logger.debug(users);
 
-  logger.log("-----------------------------------------\n");
+  logger.log("-----------------------------------------\n");*/
 
   final campuses = await appOrm.pull<Campus>();
   logger.debug(campuses);
@@ -42,47 +42,33 @@ void main() async {
 
 class Address extends Entity<Address> {
   @OrmString(maxLength: 100)
-  late String _city;
+  late String city;
 
   Address.empty() : super.empty();
-
-  get city => _city;
 }
 
 class User extends Entity<User> {
   @OrmString(isRequired: true, maxLength: 100)
-  late String _name;
+  late String name;
 
   @OrmEntity()
-  late Address _home;
+  late Address home;
 
   @OrmEntity()
-  late Campus _campus;
+  late Campus campus;
 
   User.empty() : super.empty();
-
-  get name => _name;
-
-  get home => _home;
-
-  get campus => _campus;
 }
 
 class Campus extends Entity<Campus> {
   @OrmString(isRequired: true, maxLength: 100)
-  late String _name;
+  late String name;
 
   @OrmEntity()
-  late Address _address;
+  late Address address;
 
   @OrmEntities()
-  final List<User> _users = [];
+  final List<User> users = [];
 
   Campus.empty() : super.empty();
-
-  get name => _name;
-
-  get address => _address;
-
-  get users => _users;
 }
