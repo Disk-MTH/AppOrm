@@ -11,10 +11,10 @@ import "identifiable.dart";
 
 class AppOrm extends Identifiable<AppOrm> {
   @OrmNative()
-  late String? name;
+  String name = "";
 
   @OrmNative()
-  late bool? enabled;
+  bool enabled = false;
 
   final Databases databases;
 
@@ -36,7 +36,7 @@ class AppOrm extends Identifiable<AppOrm> {
   Future<void> loadSkeleton() async {
     _skeleton.clear();
 
-    await databases.listCollections(databaseId: id!).then((value) {
+    await databases.listCollections(databaseId: id).then((value) {
       for (var collection in value.collections) {
         //TODO: patch map to have all typed lists
         _skeleton[collection.name] = Repository(collection.toMap());
@@ -56,7 +56,8 @@ class AppOrm extends Identifiable<AppOrm> {
     logger.debug("Listing {}: {}", args: [T, ids.isEmpty ? "all" : ids]);
 
     final List<T> entities = [];
-    final List<Document> documents = await _listDocuments(
+    final List<Document> documents = await Utils.listDocuments(
+      this,
       T.toString(),
       ids: ids,
     );
@@ -74,39 +75,22 @@ class AppOrm extends Identifiable<AppOrm> {
     return entities;
   }
 
-  Repository getRepository({Type? type, String? typeName}) {
-    if ((type == null && typeName == null) ||
-        (type != null && typeName != null)) {
-      throw "You must provide either a type or a typeName";
+  List<Repository> get repositories => _skeleton.values.toList();
+
+  Repository getRepository({String? typeName, Type? type, Entity? entity}) {
+    if ((typeName == null && type == null && entity == null) ||
+        (typeName != null && type != null && entity != null)) {
+      throw "You must provide either a typeName, a type or an entity";
     }
 
     if (type != null) typeName = type.toString();
+    if (entity != null) typeName = entity.runtimeType.toString();
 
     if (!_skeleton.containsKey(typeName)) {
       throw "Repository not found for type \"$typeName\"";
     }
 
     return _skeleton[typeName.toString()]!;
-  }
-
-  Future<List<Document>> _listDocuments(
-    String typeName, {
-    List<String> ids = const [],
-  }) {
-    final Repository repository = getRepository(typeName: typeName);
-
-    logger.debug(
-      "Retrieving documents for {}: {}",
-      args: [typeName, ids.isEmpty ? "all" : ids],
-    );
-
-    return databases.listDocuments(
-      databaseId: id!,
-      collectionId: repository.id!,
-      queries: [
-        if (ids.isNotEmpty) Query.equal("\$id", ids),
-      ],
-    ).then((value) => value.documents);
   }
 
   Future<void> _fetchEntity(
@@ -139,7 +123,8 @@ class AppOrm extends Identifiable<AppOrm> {
             mirror: mirror,
           );
         } else {
-          final data = (await _listDocuments(
+          final data = (await Utils.listDocuments(
+            this,
             mirror.type.reflectedType.toString(),
             ids: [foreignKey],
           ))
@@ -161,7 +146,8 @@ class AppOrm extends Identifiable<AppOrm> {
           if (references.any((e) => e.id == foreignKey)) {
             refList.add(references.firstWhere((e) => e.id == foreignKey));
           } else {
-            final data = (await _listDocuments(
+            final data = (await Utils.listDocuments(
+              this,
               mirror.type.typeArguments.first.reflectedType.toString(),
               ids: [foreignKey],
             ))

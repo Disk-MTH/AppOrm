@@ -2,10 +2,16 @@ import "dart:convert";
 import "dart:math";
 import "dart:mirrors";
 
+import "package:app_orm/src/app_orm.dart";
 import "package:app_orm/src/reflected_variable.dart";
 import "package:app_orm/src/serializable.dart";
+import "package:dart_appwrite/dart_appwrite.dart";
+import "package:dart_appwrite/models.dart";
+
+import "logger.dart";
 
 class Utils {
+  static AbstractLogger logger = DummyLogger();
   static final Random random = Random(DateTime.now().millisecondsSinceEpoch);
   static const String idCharset = "abcdefghijklmnopqrstuvwxyz0123456789";
 
@@ -23,6 +29,26 @@ class Utils {
       return JsonEncoder.withIndent("  ").convert(input);
     }
     return input;
+  }
+
+  //TODO add more filters
+  static Future<List<Document>> listDocuments(
+    AppOrm appOrm,
+    String typeName, {
+    List<String> ids = const [],
+  }) {
+    logger.debug(
+      "Retrieving documents for {}: {}",
+      args: [typeName, ids.isEmpty ? "all" : ids],
+    );
+
+    return appOrm.databases.listDocuments(
+      databaseId: appOrm.id,
+      collectionId: appOrm.getRepository(typeName: typeName).id,
+      queries: [
+        if (ids.isNotEmpty) Query.equal("\$id", ids),
+      ],
+    ).then((value) => value.documents);
   }
 }
 
@@ -54,7 +80,7 @@ class Reflection {
     return fields;
   }
 
-  static Map<String, ReflectedVariable> listInstanceFields(Object instance) {
+  static Map<String, ReflectedVariable> listInstanceFields(dynamic instance) {
     final fields = <String, ReflectedVariable>{};
     final InstanceMirror im = reflect(instance);
 

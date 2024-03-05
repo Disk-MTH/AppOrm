@@ -1,27 +1,28 @@
 import "package:app_orm/src/identifiable.dart";
+import "package:app_orm/src/permission.dart";
 
 import "annotations.dart";
 
 class Repository extends Identifiable {
   @OrmNative()
-  late String? databaseId;
+  String databaseId = "";
 
   @OrmNative()
-  late String? name;
+  String name = "";
 
   @OrmNative()
-  late bool? enabled;
+  bool enabled = false;
 
   @OrmNative()
-  late bool? documentSecurity;
+  bool documentSecurity = false;
 
   //TODO: review this
   @OrmNative()
-  late List? indexes;
+  List indexes = [];
 
   //TODO: review this
   @OrmNative($prefix: true)
-  late List? permissions;
+  List<Permission> permissions = [];
 
   Repository(Map<String, dynamic> data) : super.empty() {
     deserialize(data);
