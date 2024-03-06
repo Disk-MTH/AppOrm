@@ -22,20 +22,20 @@ void main() async {
     collectionId: "65d4e66e94ab54bff4bf",
     name: "Address",
     permissions: [
-      Permission.create(Role.any()),
-      Permission.create(Role.user("exampleId")),
-      Permission.create(Role.user("exampleId", "verified")),
-      Permission.create(Role.user("exampleId", "unverified")),
-      Permission.create(Role.users()),
-      Permission.create(Role.users("verified")),
-      Permission.create(Role.users("unverified")),
-      Permission.create(Role.guests()),
-      Permission.create(Role.team("exampleId")),
-      Permission.create(Role.team("exampleId", "exampleRole")),
-      Permission.create(Role.member("exampleId")),
-      Permission.create(Role.label("exampleLabel")),
+      Permission.create(role.dart.any()),
+      Permission.create(role.dart.user("exampleId")),
+      Permission.create(role.dart.user("exampleId", "verified")),
+      Permission.create(role.dart.user("exampleId", "unverified")),
+      Permission.create(role.dart.users()),
+      Permission.create(role.dart.users("verified")),
+      Permission.create(role.dart.users("unverified")),
+      Permission.create(role.dart.guests()),
+      Permission.create(role.dart.team("exampleId")),
+      Permission.create(role.dart.team("exampleId", "exampleRole")),
+      Permission.create(role.dart.member("exampleId")),
+      Permission.create(role.dart.label("exampleLabel")),
     ],
-  ).then((value) => print(value.toMap()));*/
+  ).then((value) => print(value.$permissions));*/
 
   final AbstractLogger logger = Logger();
   Utils.logger = logger;
@@ -43,8 +43,31 @@ void main() async {
 
   await appOrm.setup();
 
+  final perm = [
+    "create(\"any\")",
+    "create(\"user:exampleId\")",
+    "create(\"user:exampleId/verified\")",
+    "create(\"user:exampleId/unverified\")",
+    "create(\"users\")",
+    "create(\"users/verified\")",
+    "create(\"users/unverified\")",
+    "create(\"guests\")",
+    "create(\"team:exampleId\")",
+    "create(\"team:exampleId/exampleRole\")",
+    "create(\"member:exampleId\")",
+    "create(\"label:exampleLabel\")",
+  ];
+
+  for (var p in perm) {
+    logger.warn(p);
+  }
+
+  logger.warn("-------------------------------------------------");
+
   for (var repo in appOrm.repositories) {
-    logger.warn(repo.permissions);
+    for (var permission in repo.permissions) {
+      logger.warn(permission.toString());
+    }
   }
 
 /*  final List<Address> addresses = await appOrm.pull();
