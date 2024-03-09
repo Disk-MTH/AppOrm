@@ -5,34 +5,27 @@ import "package:app_orm/src/serializable.dart";
 import "package:app_orm/src/utils.dart";
 
 import "annotations.dart";
+import "enums.dart";
 import "logger.dart";
 
 class Identifiable<T> implements Serializable<T> {
   final AbstractLogger logger = Utils.logger;
   final Map<String, List<String>> foreignKeys = {};
 
-  @OrmNative($prefix: true)
+  // @OrmTest(AttributeType.string)
+  // @OrmNative($prefix: true)
+  @OrmTest(AttributeType.string)
   String id = Utils.uniqueId();
 
-  @OrmNative($prefix: true)
+  // @OrmNative($prefix: true)
+  @OrmTest(AttributeType.string)
   String createdAt = DateTime.now().toIso8601String();
 
-  @OrmNative($prefix: true)
+  // @OrmNative($prefix: true)
+  @OrmTest(AttributeType.string)
   String updatedAt = DateTime.now().toIso8601String();
 
-  Identifiable.empty() {
-    /*Reflection.listClassFields(runtimeType).forEach((name, mirror) {
-      final OrmNative? annotation = mirror.metadata
-          .where((e) => e.reflectee is OrmNative)
-          .firstOrNull
-          ?.reflectee;
-
-      if (annotation == null) return;
-      annotation.validate();
-
-      Reflection.setFieldValue(this, null, mirror: mirror);
-    });*/
-  }
+  Identifiable.empty();
 
   //TODO patch for cyclic references
   @override
@@ -40,7 +33,7 @@ class Identifiable<T> implements Serializable<T> {
     final Map<String, dynamic> data = {};
     Reflection.listInstanceFields(this).forEach((key, value) {
       if (value.variableMirror.metadata
-          .where((e) => e.reflectee is OrmAttribute)
+          .where((e) => e.reflectee is OrmTest)
           .isEmpty) {
         return;
       }
@@ -57,50 +50,60 @@ class Identifiable<T> implements Serializable<T> {
 
   @override
   T deserialize(Map<String, dynamic> data) {
+    Map.from(data).forEach((key, value) {
+      if (key.startsWith("\$")) {
+        data[key.substring(1)] = data.remove(key);
+      }
+    });
+
     Reflection.listClassFields(runtimeType).forEach((name, mirror) {
-      final InstanceMirror? metadata =
-          mirror.metadata.where((e) => e.reflectee is OrmAttribute).firstOrNull;
+      final InstanceMirror? metadata = mirror.metadata
+          .where(
+            (e) => e.reflectee is OrmTest,
+          )
+          .firstOrNull;
 
       if (metadata == null) return;
 
-      final OrmAttribute annotation = metadata.reflectee;
-      annotation.validate();
+      final AttributeType type = metadata.reflectee.type;
+      final Map<Modifier, dynamic> modifiers = metadata.reflectee.modifiers;
 
-      name = annotation is OrmNative
-          ? (annotation.$prefix ? "\$$name" : name)
-          : name;
-
-      name = annotation is OrmEntity || annotation is OrmEntities
-          ? "${name}_ORMID"
-          : name;
+      name = type == AttributeType.entity ? "${name}_ORMID" : name;
 
       dynamic value = data[name];
 
-      if (value == null && (annotation.isRequired || annotation.isArray)) {
-        throw "Field \"$name\" is not nullable";
-      }
-
-      if (annotation is OrmEntity) {
-        foreignKeys[name] = [value];
-      } else if (annotation is OrmEntities) {
-        foreignKeys[name] = value.cast<String>();
-      } else if (value is List) {
-        final String rawName = mirror.simpleName.toString().split('"')[1];
-
-        final List field = Reflection.getField(this, rawName);
+      if (type == AttributeType.entity) {
+        if (modifiers[Modifier.array] == true) {
+          foreignKeys[name] = value.cast<String>();
+        } else {
+          foreignKeys[name] = [value];
+        }
+      } else if (modifiers[Modifier.array] == true) {
+        final List field = Reflection.getField(
+          this,
+          MirrorSystem.getName(mirror.simpleName),
+        );
         field.clear();
 
-        switch (rawName) {
-          case "permissions":
-            value = value.map((e) => Permission.fromString(e)).toList();
-            break;
+        if (type == AttributeType.native) {
+          final Type type = mirror.type.typeArguments.first.reflectedType;
+          value = value
+              .map((e) => Reflection.instantiate(
+                    type,
+                    constructor: type == Permission ? "fromString" : "fromMap",
+                    args: [e],
+                  ))
+              .toList();
         }
 
-        field.addAll(value);
+        for (var item in value) {
+          field.add(item);
+        }
       } else {
         Reflection.setFieldValue(this, value, mirror: mirror);
       }
     });
+    logger.warn(foreignKeys);
     return this as T;
   }
 }

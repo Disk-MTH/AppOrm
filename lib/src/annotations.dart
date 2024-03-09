@@ -1,3 +1,5 @@
+import 'enums.dart';
+
 abstract class OrmAttribute<T> {
   final bool isRequired;
   final bool isArray;
@@ -26,6 +28,16 @@ abstract class OrmAttribute<T> {
       throw "Default value must be of type $T";
     }
   }
+}
+
+class OrmTest {
+  final AttributeType type;
+  final Map<Modifier, dynamic> modifiers;
+
+  const OrmTest(
+    this.type, {
+    this.modifiers = const {},
+  });
 }
 
 abstract class OrmNumber<T extends num> extends OrmAttribute<T> {

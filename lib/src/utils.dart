@@ -27,6 +27,8 @@ class Utils {
       return "${input.runtimeType}\n${input.map((e) => beautify(e)).join("\n")}";
     } else if (input is Map<String, dynamic>) {
       return JsonEncoder.withIndent("  ").convert(input);
+    } else if (input is List<Map<String, dynamic>>) {
+      return input.map((e) => beautify(e)).join("\n");
     }
     return input;
   }

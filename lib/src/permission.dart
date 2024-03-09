@@ -35,7 +35,7 @@ class Permission implements Serializable<Permission> {
     );
 
     role = Role.values.firstWhere(
-      (e) => e.toString().split('.')[1] == roleString,
+      (e) => e.toString().split(".")[1] == roleString,
     );
 
     id = idString != null
@@ -66,13 +66,14 @@ class Permission implements Serializable<Permission> {
     return this;
   }
 
-  @override
-  String toString() {
+  String get string {
     return "${crud.name}(\"${role.name}${id != null ? ":$id" : ""}${resource != null ? "/$resource" : ""}\")";
   }
 
-  Status? get status {
+  Verification? get status {
     if (resource == null) return null;
-    return Status.values.where((e) => e.toString() == resource).firstOrNull;
+    return Verification.values
+        .where((e) => e.toString() == resource)
+        .firstOrNull;
   }
 }

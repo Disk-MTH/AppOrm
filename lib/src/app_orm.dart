@@ -7,13 +7,16 @@ import "package:dart_appwrite/dart_appwrite.dart";
 import "package:dart_appwrite/models.dart";
 
 import "annotations.dart";
+import "enums.dart";
 import "identifiable.dart";
 
 class AppOrm extends Identifiable<AppOrm> {
-  @OrmNative()
+  //@OrmNative()
+  @OrmTest(AttributeType.string)
   String name = "";
 
-  @OrmNative()
+  // @OrmNative()
+  @OrmTest(AttributeType.boolean)
   bool enabled = false;
 
   final Databases databases;
@@ -38,7 +41,6 @@ class AppOrm extends Identifiable<AppOrm> {
 
     await databases.listCollections(databaseId: id).then((value) {
       for (var collection in value.collections) {
-        //TODO: patch map to have all typed lists
         _skeleton[collection.name] = Repository(collection.toMap());
       }
     });
