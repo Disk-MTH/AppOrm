@@ -4,25 +4,24 @@ import "package:app_orm/src/permission.dart";
 import "package:app_orm/src/serializable.dart";
 import "package:app_orm/src/utils.dart";
 
-import "annotations.dart";
 import "enums.dart";
 import "logger.dart";
+import "orm.dart";
 
 class Identifiable<T> implements Serializable<T> {
   final AbstractLogger logger = Utils.logger;
   final Map<String, List<String>> foreignKeys = {};
 
-  // @OrmTest(AttributeType.string)
-  // @OrmNative($prefix: true)
-  @OrmTest(AttributeType.string)
+  @Orm(AttributeType.string, modifiers: {
+    Modifier.isRequired: true,
+    Modifier.size: 20,
+  })
   String id = Utils.uniqueId();
 
-  // @OrmNative($prefix: true)
-  @OrmTest(AttributeType.string)
+  @Orm(AttributeType.string, modifiers: {Modifier.isRequired: true})
   String createdAt = DateTime.now().toIso8601String();
 
-  // @OrmNative($prefix: true)
-  @OrmTest(AttributeType.string)
+  @Orm(AttributeType.string, modifiers: {Modifier.isRequired: true})
   String updatedAt = DateTime.now().toIso8601String();
 
   Identifiable.empty();
@@ -33,7 +32,7 @@ class Identifiable<T> implements Serializable<T> {
     final Map<String, dynamic> data = {};
     Reflection.listInstanceFields(this).forEach((key, value) {
       if (value.variableMirror.metadata
-          .where((e) => e.reflectee is OrmTest)
+          .where((e) => e.reflectee is Orm)
           .isEmpty) {
         return;
       }
@@ -59,26 +58,28 @@ class Identifiable<T> implements Serializable<T> {
     Reflection.listClassFields(runtimeType).forEach((name, mirror) {
       final InstanceMirror? metadata = mirror.metadata
           .where(
-            (e) => e.reflectee is OrmTest,
+            (e) => e.reflectee is Orm,
           )
           .firstOrNull;
 
       if (metadata == null) return;
 
-      final AttributeType type = metadata.reflectee.type;
-      final Map<Modifier, dynamic> modifiers = metadata.reflectee.modifiers;
+      final Orm annotation = metadata.reflectee;
+      final AttributeType type = annotation.type;
+      final Map<Modifier, dynamic> modifiers = annotation.modifiers;
 
       name = type == AttributeType.entity ? "${name}_ORMID" : name;
 
       dynamic value = data[name];
+      annotation.validate();
 
       if (type == AttributeType.entity) {
-        if (modifiers[Modifier.array] == true) {
+        if (modifiers[Modifier.isArray] == true) {
           foreignKeys[name] = value.cast<String>();
         } else {
           foreignKeys[name] = [value];
         }
-      } else if (modifiers[Modifier.array] == true) {
+      } else if (modifiers[Modifier.isArray] == true) {
         final List field = Reflection.getField(
           this,
           MirrorSystem.getName(mirror.simpleName),
@@ -103,7 +104,6 @@ class Identifiable<T> implements Serializable<T> {
         Reflection.setFieldValue(this, value, mirror: mirror);
       }
     });
-    logger.warn(foreignKeys);
     return this as T;
   }
 }

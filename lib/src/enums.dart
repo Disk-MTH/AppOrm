@@ -6,18 +6,7 @@ enum Status { available, processing, deleting, stuck, failed }
 
 enum Role { any, guests, user, users, team, member, label }
 
-// enum Format { email, ip, url, enumeration }
-
-enum Modifier {
-  required,
-  array,
-  // nullable,
-  defaultValue,
-  size,
-  min,
-  max,
-  elements
-}
+enum Modifier { isRequired, isArray, defaultValue, size, min, max, elements }
 
 enum Verification { verified, unverified }
 
@@ -38,10 +27,8 @@ enum AttributeType {
   url,
   enumeration;
 
-/*  core.Type get type {
+  core.Type get type {
     switch (this) {
-      case AttributeType.string:
-        return core.String;
       case AttributeType.integer:
         return core.int;
       case AttributeType.double:
@@ -50,18 +37,8 @@ enum AttributeType {
         return core.bool;
       case AttributeType.datetime:
         return core.DateTime;
-      case AttributeType.email:
+      default:
         return core.String;
-      case AttributeType.ip:
-        return core.String;
-      case AttributeType.url:
-        return core.String;
-      case AttributeType.enumeration:
-        return core.String;
-      case AttributeType.entity:
-        return Entity;
-      case AttributeType.native:
-        return core.Object;
     }
-  }*/
+  }
 }

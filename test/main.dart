@@ -1,11 +1,11 @@
 import 'dart:core';
 import 'dart:io';
 
-import 'package:app_orm/src/annotations.dart';
 import 'package:app_orm/src/app_orm.dart';
 import 'package:app_orm/src/entity.dart';
 import 'package:app_orm/src/enums.dart';
 import 'package:app_orm/src/logger.dart';
+import 'package:app_orm/src/orm.dart';
 import 'package:app_orm/src/utils.dart';
 import 'package:dart_appwrite/dart_appwrite.dart';
 
@@ -43,16 +43,19 @@ void main() async {
   final campuses = await appOrm.pull<Campus>();
   logger.debug(campuses);*/
 
-  final users = await appOrm.pull<User>();
-  logger.debug(users);
+/*  final campuses = await appOrm.pull<Campus>();
+  logger.debug(campuses);*/
+
+  final test = await appOrm.pull<Address>();
+  // logger.debug(test);
 
   // logger.log("Finished");
   exit(0);
 }
 
 class Address extends Entity<Address> {
-  @OrmTest(AttributeType.string, modifiers: {
-    Modifier.required: true,
+  @Orm(AttributeType.string, modifiers: {
+    Modifier.isRequired: true,
     Modifier.size: 100,
   })
   late String city;
@@ -61,48 +64,36 @@ class Address extends Entity<Address> {
 }
 
 class User extends Entity<User> {
-  @OrmTest(AttributeType.string, modifiers: {
-    Modifier.required: true,
+  @Orm(AttributeType.string, modifiers: {
+    Modifier.isRequired: true,
     Modifier.size: 100,
   })
   late String name;
 
-  @OrmTest(AttributeType.entity)
+  @Orm(AttributeType.entity)
   late Address home;
 
-  @OrmTest(AttributeType.entity)
+  @Orm(AttributeType.entity)
   late Campus campus;
 
   User.empty() : super.empty();
 }
 
 class Campus extends Entity<Campus> {
-  @OrmTest(AttributeType.string)
+  @Orm(AttributeType.string, modifiers: {
+    Modifier.defaultValue: 12,
+  })
   late String name;
 
-  @OrmTest(AttributeType.entity)
+  @Orm(AttributeType.entity)
   late Address address;
 
-  @OrmTest(AttributeType.entity, modifiers: {
-    Modifier.array: true,
-  })
+  @Orm(AttributeType.entity, modifiers: {Modifier.isArray: true})
   List<User> users = [];
 
   Campus.empty() : super.empty();
 }
 
 class Test extends Entity<Test> {
-  @OrmString(isRequired: true, maxLength: 100)
-  late String string_1;
-
-  @OrmString(maxLength: 100)
-  late String string_2;
-
-  @OrmString(maxLength: 100, defaultValue: "test")
-  late String string_3;
-
-  @OrmTest(AttributeType.string)
-  late String string_4;
-
   Test.empty() : super.empty();
 }

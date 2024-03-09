@@ -6,17 +6,18 @@ import "package:app_orm/src/utils.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
 import "package:dart_appwrite/models.dart";
 
-import "annotations.dart";
 import "enums.dart";
 import "identifiable.dart";
+import "orm.dart";
 
 class AppOrm extends Identifiable<AppOrm> {
-  //@OrmNative()
-  @OrmTest(AttributeType.string)
+  @Orm(AttributeType.string, modifiers: {
+    Modifier.isRequired: true,
+    Modifier.size: 20,
+  })
   String name = "";
 
-  // @OrmNative()
-  @OrmTest(AttributeType.boolean)
+  @Orm(AttributeType.boolean, modifiers: {Modifier.isRequired: true})
   bool enabled = false;
 
   final Databases databases;
@@ -105,17 +106,32 @@ class AppOrm extends Identifiable<AppOrm> {
       final mirror = fields[name]!;
 
       final InstanceMirror? metadata = mirror.metadata
-          .where((e) => e.reflectee is OrmEntity || e.reflectee is OrmEntities)
+          .where(
+            (e) =>
+                e.reflectee is Orm && e.reflectee.type == AttributeType.entity,
+          )
           .firstOrNull;
 
       if (metadata == null) continue;
 
-      final OrmAttribute annotation = metadata.reflectee;
-      annotation.validate();
-
       final String keyName = "${name}_ORMID";
 
-      if (annotation is OrmEntity) {
+      if (metadata.reflectee.modifiers[Modifier.isArray] == true) {
+        final refList = Reflection.getField(origin, name);
+
+        for (var foreignKey in origin.foreignKeys[keyName]!) {
+          if (references.any((e) => e.id == foreignKey)) {
+            refList.add(references.firstWhere((e) => e.id == foreignKey));
+          } else {
+            await _test(
+              origin,
+              references,
+              mirror.type.typeArguments.first.reflectedType,
+              foreignKey,
+            );
+          }
+        }
+      } else {
         final String foreignKey = origin.foreignKeys[keyName]!.first;
 
         if (references.any((e) => e.id == foreignKey)) {
@@ -125,47 +141,53 @@ class AppOrm extends Identifiable<AppOrm> {
             mirror: mirror,
           );
         } else {
-          final data = (await Utils.listDocuments(
-            this,
-            mirror.type.reflectedType.toString(),
-            ids: [foreignKey],
-          ))
-              .first
-              .data;
-
-          final entity = Reflection.instantiate(
+          await _test(
+            origin,
+            references,
             mirror.type.reflectedType,
-            constructor: "empty",
-          ).deserialize(data);
-
-          await _fetchEntity(entity, [origin, ...references]);
-          await _fetchEntity(origin, [entity, ...references]);
-        }
-      } else {
-        final refList = Reflection.getField(origin, name);
-
-        for (var foreignKey in origin.foreignKeys[keyName]!) {
-          if (references.any((e) => e.id == foreignKey)) {
-            refList.add(references.firstWhere((e) => e.id == foreignKey));
-          } else {
-            final data = (await Utils.listDocuments(
-              this,
-              mirror.type.typeArguments.first.reflectedType.toString(),
-              ids: [foreignKey],
-            ))
-                .first
-                .data;
-
-            final entity = Reflection.instantiate(
-              mirror.type.typeArguments.first.reflectedType,
-              constructor: "empty",
-            ).deserialize(data);
-
-            await _fetchEntity(entity, [origin, ...references]);
-            await _fetchEntity(origin, [entity, ...references]);
-          }
+            foreignKey,
+          );
         }
       }
     }
+  }
+
+  Future<void> _test(
+    Identifiable origin,
+    List<Identifiable> references,
+    Type type,
+    String foreignKey,
+  ) async {
+    final data = (await Utils.listDocuments(
+      this,
+      type.toString(),
+      ids: [foreignKey],
+    ))
+        .first
+        .data;
+
+    final entity = Reflection.instantiate(
+      type,
+      constructor: "empty",
+    ).deserialize(data);
+
+    await _fetchEntity(entity, [origin, ...references]);
+    await _fetchEntity(origin, [entity, ...references]);
+
+    /*final data = (await Utils.listDocuments(
+      this,
+      mirror.type.typeArguments.first.reflectedType.toString(),
+      ids: [foreignKey],
+    ))
+        .first
+        .data;
+
+    final entity = Reflection.instantiate(
+      mirror.type.typeArguments.first.reflectedType,
+      constructor: "empty",
+    ).deserialize(data);
+
+    await _fetchEntity(entity, [origin, ...references]);
+    await _fetchEntity(origin, [entity, ...references]);*/
   }
 }

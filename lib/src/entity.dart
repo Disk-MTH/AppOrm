@@ -1,17 +1,23 @@
-import "package:app_orm/src/annotations.dart";
 import "package:app_orm/src/identifiable.dart";
+import "package:app_orm/src/orm.dart";
 import "package:app_orm/src/permission.dart";
 
 import "enums.dart";
 
 abstract class Entity<T> extends Identifiable<T> {
-  @OrmTest(AttributeType.string)
+  @Orm(AttributeType.string, modifiers: {
+    Modifier.isRequired: true,
+    Modifier.size: 20,
+  })
   String databaseId = "";
 
-  @OrmTest(AttributeType.string)
+  @Orm(AttributeType.string, modifiers: {
+    Modifier.isRequired: true,
+    Modifier.size: 20,
+  })
   String collectionId = "";
 
-  @OrmTest(AttributeType.native, modifiers: {Modifier.array: true})
+  @Orm(AttributeType.native, modifiers: {Modifier.isArray: true})
   List<Permission> permissions = [];
 
   Entity.empty() : super.empty();

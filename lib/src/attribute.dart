@@ -20,6 +20,7 @@ class Attribute implements Serializable<Attribute> {
 
   Attribute.fromMap(Map<String, dynamic> attribute) {
     attribute["defaultValue"] = attribute.remove("default");
+    print(attribute);
 
     key = attribute["key"];
 

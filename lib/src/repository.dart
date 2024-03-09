@@ -3,29 +3,32 @@ import "package:app_orm/src/identifiable.dart";
 import "package:app_orm/src/index.dart";
 import "package:app_orm/src/permission.dart";
 
-import "annotations.dart";
 import "enums.dart";
+import "orm.dart";
 
 class Repository extends Identifiable {
-  @OrmTest(AttributeType.string)
+  @Orm(AttributeType.string, modifiers: {
+    Modifier.isRequired: true,
+    Modifier.size: 20,
+  })
   String databaseId = "";
 
-  @OrmTest(AttributeType.string)
+  @Orm(AttributeType.string, modifiers: {Modifier.isRequired: true})
   String name = "";
 
-  @OrmTest(AttributeType.boolean)
+  @Orm(AttributeType.boolean, modifiers: {Modifier.isRequired: true})
   bool enabled = false;
 
-  @OrmTest(AttributeType.boolean)
+  @Orm(AttributeType.boolean, modifiers: {Modifier.isRequired: true})
   bool documentSecurity = false;
 
-  @OrmTest(AttributeType.native, modifiers: {Modifier.array: true})
+  @Orm(AttributeType.native, modifiers: {Modifier.isArray: true})
   List<Permission> permissions = [];
 
-  @OrmTest(AttributeType.native, modifiers: {Modifier.array: true})
+  @Orm(AttributeType.native, modifiers: {Modifier.isArray: true})
   List<Attribute> attributes = [];
 
-  @OrmTest(AttributeType.native, modifiers: {Modifier.array: true})
+  @Orm(AttributeType.native, modifiers: {Modifier.isArray: true})
   List<Index> indexes = [];
 
   Repository(Map<String, dynamic> data) : super.empty() {
