@@ -2,19 +2,21 @@ import "dart:mirrors";
 
 import "package:app_orm/src/entity.dart";
 import "package:app_orm/src/repository.dart";
-import "package:app_orm/src/utils.dart";
+import "package:app_orm/src/utils/database_utils.dart";
+import "package:app_orm/src/utils/reflection.dart";
+import "package:app_orm/src/utils/utils.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
 import "package:dart_appwrite/models.dart";
 
-import "enums.dart";
 import "identifiable.dart";
 import "orm.dart";
+import 'utils/enums.dart';
 
 class AppwriteOrm extends Identifiable<AppwriteOrm> {
-  @Orm(AttributeType.string, modifiers: {Modifier.isRequired: true})
+  @Orm(AttributeType.native)
   String name = "";
 
-  @Orm(AttributeType.boolean, modifiers: {Modifier.isRequired: true})
+  @Orm(AttributeType.native)
   bool enabled = false;
 
   final Databases databases;
@@ -24,12 +26,16 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
     id = databaseId;
   }
 
-  Future<void> setup(List<Repository> skeleton, {bool sync = false}) async {
+  Future<void> setup(
+    List<Repository> skeleton, {
+    bool sync = false,
+    bool clean = false,
+  }) async {
     logger.debug("Appwrite ORM setup ${sync ? "with" : "without"} sync mode");
 
-    deserialize((await databases.get(databaseId: id)).toMap());
+    fromMap((await databases.get(databaseId: id)).toMap());
 
-    logger.debug("Mapped to database \"{} {}\"", args: [id, name]);
+    logger.debug("Mapped to database \"{}\"", args: [name]);
     _skeleton.clear();
 
     final List<Collection> collections = await databases
@@ -51,39 +57,40 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
           args: [repository.name, name],
         );
 
-        if (sync &&
-            await DatabaseUtils.createCollection(databases, repository)) {
+        if (sync && await DatabaseUtils.createCollection(this, repository)) {
           _skeleton.add(repository);
         }
         continue;
       }
 
-/*      Map.from(collection).forEach((key, value) {
-        if (key.startsWith("\$")) {
-          collection[key.substring(1)] = collection.remove(key);
+      repository.id = collection["\$id"];
+      repository.createdAt = collection["\$createdAt"];
+      repository.updatedAt = collection["\$updatedAt"];
+
+      if (!repository.equals(Repository.fromMap(collection))) {
+        logger.warn(
+          "Collection \"{}\" has differences with the skeleton",
+          args: [repository.name],
+        );
+
+        if (!sync && await DatabaseUtils.updateCollection(this, repository)) {
+          _skeleton.add(repository);
         }
-      });*/
+        continue;
+      }
 
-      /*Reflection.listClassFields(
-        repository.runtimeType,
-        annotation: Orm,
-      ).forEach((name, mirror) {
-        final Orm orm = mirror.metadata
-            .firstWhere(
-              (e) => e.reflectee is Orm,
-            )
-            .reflectee;
-
-        orm.validate("${repository.name}.$name");
-
-        // print(name);
-        // print(collection[name]);
-
-        _skeleton.add(repository);
-      });*/
-
-      //When everything is done, add the repository to the skeleton
       _skeleton.add(repository);
+    }
+
+    for (var collection in collections) {
+      if (_skeleton.any((e) => e.name == collection.name)) continue;
+
+      logger.warn(
+        "Collection \"{}\" is present in the database but not in the skeleton",
+        args: [collection.name],
+      );
+
+      if (clean) await DatabaseUtils.deleteCollection(this, collection.$id);
     }
 
     if (_skeleton.isEmpty) {
@@ -198,7 +205,7 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
       metadata.reflectee.validate();
       final String keyName = "${name}_ORMID";
 
-      if (metadata.reflectee.modifiers[Modifier.isArray] == true) {
+      if (metadata.reflectee.modifiers[Modifier.array] == true) {
         final refList = Reflection.getField(origin, name);
 
         for (var foreignKey in origin.foreignKeys[keyName]!) {

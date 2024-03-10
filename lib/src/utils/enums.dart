@@ -6,7 +6,7 @@ enum Status { available, processing, deleting, stuck, failed }
 
 enum Role { any, guests, user, users, team, member, label }
 
-enum Modifier { isRequired, isArray, defaultValue, size, min, max, elements }
+enum Modifier { required, array, defaultValue, size, min, max, elements }
 
 enum Verification { verified, unverified }
 

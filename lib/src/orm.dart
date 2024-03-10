@@ -1,14 +1,8 @@
-import "enums.dart";
+import "package:app_orm/src/utils/utils.dart";
+
+import 'utils/enums.dart';
 
 class Orm {
-  static const int stringMax = 1073741824;
-
-  static const int intMin = -intMax;
-  static const int intMax = 9223372036854775807;
-
-  static const double floatMin = -floatMax;
-  static const double floatMax = 1.7976931348623157e+308;
-
   final AttributeType type;
   final Map<Modifier, dynamic> modifiers;
 
@@ -20,14 +14,14 @@ class Orm {
   void validate(String field) {
     final String notAllowed = "not allowed for \"$field\"";
 
-    if (modifiers[Modifier.isRequired] == true &&
-        modifiers[Modifier.isArray] == true) {
+    if (modifiers[Modifier.required] == true &&
+        modifiers[Modifier.array] == true) {
       throw "[isRequired && isArray] $notAllowed";
     }
 
     if (modifiers[Modifier.defaultValue] != null &&
-        (modifiers[Modifier.isRequired] == true ||
-            modifiers[Modifier.isArray] == true)) {
+        (modifiers[Modifier.required] == true ||
+            modifiers[Modifier.array] == true)) {
       throw "[defaultValue && (isRequired || isArray)] $notAllowed";
     }
 
@@ -46,8 +40,8 @@ class Orm {
         throw "[size != null && type != AttributeType.string] $notAllowed";
       } else if (size is! int) {
         throw "[size is! int] $notAllowed";
-      } else if (size <= 0 || size > stringMax) {
-        throw "[0 >= size > $stringMax] $notAllowed";
+      } else if (size <= 0 || size > Utils.stringMax) {
+        throw "[0 >= size > ${Utils.stringMax}] $notAllowed";
       }
     }
 
@@ -60,14 +54,14 @@ class Orm {
         if (type == AttributeType.integer) {
           if (min is! int) {
             throw "[min is! int] $notAllowed";
-          } else if (min < intMin || min > intMax) {
-            throw "[$intMin >= min > $intMax] $notAllowed";
+          } else if (min < Utils.intMin || min > Utils.intMax) {
+            throw "[${Utils.intMin} >= min > ${Utils.intMax}] $notAllowed";
           }
         } else {
           if (min is! double) {
             throw "[min is! double] $notAllowed";
-          } else if (min < floatMin || min > floatMax) {
-            throw "[$floatMin >= min > $floatMax] $notAllowed";
+          } else if (min < Utils.floatMin || min > Utils.floatMax) {
+            throw "[${Utils.floatMin} >= min > ${Utils.floatMax}] $notAllowed";
           }
         }
       }
@@ -82,14 +76,14 @@ class Orm {
         if (type == AttributeType.integer) {
           if (max is! int) {
             throw "[max is! int] $notAllowed";
-          } else if (max < intMin || max > intMax) {
-            throw "[$intMin >= max > $intMax]$notAllowed";
+          } else if (max < Utils.intMin || max > Utils.intMax) {
+            throw "[${Utils.intMin} >= max > ${Utils.intMax}]$notAllowed";
           }
         } else {
           if (max is! double) {
             throw "[max is! double] $notAllowed";
-          } else if (max < floatMin || max > floatMax) {
-            throw "[$floatMin >= max > $floatMax] $notAllowed";
+          } else if (max < Utils.floatMin || max > Utils.floatMax) {
+            throw "[${Utils.floatMin} >= max > ${Utils.floatMax}] $notAllowed";
           }
         }
       }

@@ -1,12 +1,12 @@
-import "package:app_orm/src/enums.dart";
-import "package:app_orm/src/serializable.dart";
+import 'package:app_orm/src/utils/enums.dart';
+import 'package:app_orm/src/utils/serializable.dart';
 
 class Index with Serializable<Index> {
   late String key;
   late IndexType type;
   late Map<String, SortOrder> attributes;
-  late final Status? status;
-  late final String? error;
+  late Status? status;
+  late String? error;
 
   Index(this.key, this.type, this.attributes)
       : status = null,
@@ -14,7 +14,7 @@ class Index with Serializable<Index> {
 
   Index.empty();
 
-  Index.fromMap(Map<String, dynamic> index) {
+  Index.fromModel(Map<String, dynamic> index) {
     key = index["key"];
 
     type = IndexType.values.firstWhere(
@@ -39,17 +39,17 @@ class Index with Serializable<Index> {
     error = index["error"].isEmpty ? null : index["error"];
   }
 
+  //TODO: test
   @override
   Map<String, dynamic> serialize() {
     return {
       "key": key,
       "type": type.name,
       "attributes": attributes.map((key, value) => MapEntry(key, value.name)),
-      if (status != null) "status": status!.name,
-      if (error != null) "error": error,
     };
   }
 
+  //TODO: test
   @override
   Index deserialize(Map<String, dynamic> data) {
     key = data["key"];
@@ -61,5 +61,15 @@ class Index with Serializable<Index> {
     status = Status.values.where((e) => e.name == data["status"]).firstOrNull;
     error = data["error"];
     return this;
+  }
+
+  @override
+  bool equals(Serializable other) {
+    return other is Index &&
+        other.key == key &&
+        other.type == type &&
+        other.attributes.length == attributes.length &&
+        !other.attributes.entries.any((o) => !attributes.entries
+            .any((e) => o.key == e.key && o.value == e.value));
   }
 }

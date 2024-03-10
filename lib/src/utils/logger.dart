@@ -1,4 +1,4 @@
-import 'package:app_orm/src/utils.dart';
+import "package:app_orm/src/utils/utils.dart";
 
 abstract class AbstractLogger {
   void debug(
