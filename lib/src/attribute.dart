@@ -2,7 +2,7 @@ import "package:app_orm/src/serializable.dart";
 
 import "enums.dart";
 
-class Attribute implements Serializable<Attribute> {
+class Attribute with Serializable<Attribute> {
   late String key;
   late AttributeType type;
   late Map<Modifier, dynamic> modifiers;
@@ -20,7 +20,6 @@ class Attribute implements Serializable<Attribute> {
 
   Attribute.fromMap(Map<String, dynamic> attribute) {
     attribute["defaultValue"] = attribute.remove("default");
-    print(attribute);
 
     key = attribute["key"];
 

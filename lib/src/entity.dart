@@ -17,8 +17,24 @@ abstract class Entity<T> extends Identifiable<T> {
   })
   String collectionId = "";
 
+/*  //TODO: patch
+  @Orm(AttributeType.boolean, modifiers: {Modifier.isRequired: true})
+  bool enabled = false;
+
+  //TODO: patch
+  @Orm(AttributeType.boolean, modifiers: {Modifier.isRequired: true})
+  bool documentSecurity = false;*/
+
   @Orm(AttributeType.native, modifiers: {Modifier.isArray: true})
   List<Permission> permissions = [];
+
+/*  //TODO: patch
+  @Orm(AttributeType.native, modifiers: {Modifier.isArray: true})
+  List<Attribute> attributes = [];
+
+  //TODO: patch
+  @Orm(AttributeType.native, modifiers: {Modifier.isArray: true})
+  List<Index> indexes = [];*/
 
   Entity.empty() : super.empty();
 }

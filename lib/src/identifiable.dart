@@ -5,24 +5,22 @@ import "package:app_orm/src/serializable.dart";
 import "package:app_orm/src/utils.dart";
 
 import "enums.dart";
-import "logger.dart";
 import "orm.dart";
 
-class Identifiable<T> implements Serializable<T> {
-  final AbstractLogger logger = Utils.logger;
+class Identifiable<T> with Serializable<T> {
   final Map<String, List<String>> foreignKeys = {};
 
   @Orm(AttributeType.string, modifiers: {
     Modifier.isRequired: true,
     Modifier.size: 20,
   })
-  String id = Utils.uniqueId();
+  late String id;
 
   @Orm(AttributeType.string, modifiers: {Modifier.isRequired: true})
-  String createdAt = DateTime.now().toIso8601String();
+  late String createdAt;
 
   @Orm(AttributeType.string, modifiers: {Modifier.isRequired: true})
-  String updatedAt = DateTime.now().toIso8601String();
+  late String updatedAt;
 
   Identifiable.empty();
 
@@ -71,7 +69,7 @@ class Identifiable<T> implements Serializable<T> {
       name = type == AttributeType.entity ? "${name}_ORMID" : name;
 
       dynamic value = data[name];
-      annotation.validate();
+      annotation.validate("");
 
       if (type == AttributeType.entity) {
         if (modifiers[Modifier.isArray] == true) {

@@ -10,35 +10,112 @@ import "enums.dart";
 import "identifiable.dart";
 import "orm.dart";
 
-class AppOrm extends Identifiable<AppOrm> {
-  @Orm(AttributeType.string, modifiers: {
-    Modifier.isRequired: true,
-    Modifier.size: 20,
-  })
+class AppwriteOrm extends Identifiable<AppwriteOrm> {
+  @Orm(AttributeType.string, modifiers: {Modifier.isRequired: true})
   String name = "";
 
   @Orm(AttributeType.boolean, modifiers: {Modifier.isRequired: true})
   bool enabled = false;
 
   final Databases databases;
+  final List<Repository> _skeleton = [];
 
-  final String _databaseId;
-  final Map<String, Repository> _skeleton = {};
-
-  AppOrm(this._databaseId, this.databases) : super.empty();
-
-  Future<void> setup({bool preloadSkeleton = true}) async {
-    logger.debug("Setting up AppOrm...");
-
-    deserialize((await databases.get(databaseId: _databaseId)).toMap());
-
-    logger.debug("AppOrm mapped to: {}", args: [id]);
-
-    if (preloadSkeleton) await loadSkeleton();
+  AppwriteOrm(String databaseId, this.databases) : super.empty() {
+    id = databaseId;
   }
 
-  Future<void> loadSkeleton() async {
+  Future<void> setup(List<Repository> skeleton, {bool sync = false}) async {
+    logger.debug("Appwrite ORM setup ${sync ? "with" : "without"} sync mode");
+
+    deserialize((await databases.get(databaseId: id)).toMap());
+
+    logger.debug("Mapped to database \"{} {}\"", args: [id, name]);
     _skeleton.clear();
+
+    final List<Collection> collections = await databases
+        .listCollections(databaseId: id)
+        .then((value) => value.collections);
+
+    for (var repository in skeleton) {
+      repository.databaseId = id;
+
+      final Map<String, dynamic> collection = collections
+              .where((e) => e.name == repository.name)
+              .firstOrNull
+              ?.toMap() ??
+          {};
+
+      if (collection.isEmpty) {
+        logger.warn(
+          "Collection \"{}\" not found in database \"{}\"",
+          args: [repository.name, name],
+        );
+
+        if (sync &&
+            await DatabaseUtils.createCollection(databases, repository)) {
+          _skeleton.add(repository);
+        }
+        continue;
+      }
+
+/*      Map.from(collection).forEach((key, value) {
+        if (key.startsWith("\$")) {
+          collection[key.substring(1)] = collection.remove(key);
+        }
+      });*/
+
+      /*Reflection.listClassFields(
+        repository.runtimeType,
+        annotation: Orm,
+      ).forEach((name, mirror) {
+        final Orm orm = mirror.metadata
+            .firstWhere(
+              (e) => e.reflectee is Orm,
+            )
+            .reflectee;
+
+        orm.validate("${repository.name}.$name");
+
+        // print(name);
+        // print(collection[name]);
+
+        _skeleton.add(repository);
+      });*/
+
+      //When everything is done, add the repository to the skeleton
+      _skeleton.add(repository);
+    }
+
+    if (_skeleton.isEmpty) {
+      throw "Skeleton mismatch, please sync it to the database";
+    } else {
+      logger.debug(
+        "Skeleton loaded: {}",
+        args: [_skeleton.map((e) => e.name)],
+      );
+    }
+  }
+
+  get skeleton => _skeleton;
+
+  /*Future<void> loadSkeleton(List<Type> skeleton) async {
+    logger.debug("Loading skeleton...");
+
+    final List<Repository> userSkeleton = [];
+
+    for (var type in skeleton) {
+      if (!Reflection.isSubtype(type, Entity)) {
+        throw "Type $type is not a subtype of Entity";
+      }
+      // userSkeleton.add(Repository(type));
+    }
+
+    _skeleton.clear();
+    _skeleton.addAll(userSkeleton);
+
+    logger.debug("User skeleton loaded: {}", args: [_skeleton]);
+
+    */ /*  _skeleton.clear();
 
     await databases.listCollections(databaseId: id).then((value) {
       for (var collection in value.collections) {
@@ -49,8 +126,8 @@ class AppOrm extends Identifiable<AppOrm> {
     logger.debug(
       "{} collections found: {}",
       args: [_skeleton.length, _skeleton.keys],
-    );
-  }
+    );*/ /*
+  }*/
 
   Future<List<T>> pull<T extends Entity>({
     bool loadArchitecture = false,
@@ -71,6 +148,9 @@ class AppOrm extends Identifiable<AppOrm> {
         constructor: "empty",
       ).deserialize(document.data);
 
+      Reflection.setFieldValue(entity, getRepository(type: T),
+          name: "repository");
+
       await _fetchEntity(entity, []);
       entities.add(entity);
     }
@@ -78,10 +158,10 @@ class AppOrm extends Identifiable<AppOrm> {
     return entities;
   }
 
-  List<Repository> get repositories => _skeleton.values.toList();
+  // List<Repository> get repositories => _skeleton.values.toList();
 
   Repository getRepository({String? typeName, Type? type, Entity? entity}) {
-    if ((typeName == null && type == null && entity == null) ||
+    /*if ((typeName == null && type == null && entity == null) ||
         (typeName != null && type != null && entity != null)) {
       throw "You must provide either a typeName, a type or an entity";
     }
@@ -93,7 +173,8 @@ class AppOrm extends Identifiable<AppOrm> {
       throw "Repository not found for type \"$typeName\"";
     }
 
-    return _skeleton[typeName.toString()]!;
+    return _skeleton[typeName.toString()]!;*/
+    return _skeleton.first;
   }
 
   Future<void> _fetchEntity(
@@ -114,6 +195,7 @@ class AppOrm extends Identifiable<AppOrm> {
 
       if (metadata == null) continue;
 
+      metadata.reflectee.validate();
       final String keyName = "${name}_ORMID";
 
       if (metadata.reflectee.modifiers[Modifier.isArray] == true) {

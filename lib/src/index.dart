@@ -1,7 +1,7 @@
 import "package:app_orm/src/enums.dart";
 import "package:app_orm/src/serializable.dart";
 
-class Index implements Serializable<Index> {
+class Index with Serializable<Index> {
   late String key;
   late IndexType type;
   late Map<String, SortOrder> attributes;

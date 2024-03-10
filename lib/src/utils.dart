@@ -2,8 +2,9 @@ import "dart:convert";
 import "dart:math";
 import "dart:mirrors";
 
-import "package:app_orm/src/app_orm.dart";
+import "package:app_orm/src/appwrite_orm.dart";
 import "package:app_orm/src/reflected_variable.dart";
+import "package:app_orm/src/repository.dart";
 import "package:app_orm/src/serializable.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
 import "package:dart_appwrite/models.dart";
@@ -16,8 +17,10 @@ class Utils {
   static const String idCharset = "abcdefghijklmnopqrstuvwxyz0123456789";
 
   static String uniqueId() {
-    return List.generate(20, (_) => idCharset[random.nextInt(idCharset.length)])
-        .join();
+    return List.generate(
+      20,
+      (_) => idCharset[random.nextInt(idCharset.length)],
+    ).join();
   }
 
   static String beautify(dynamic input) {
@@ -35,7 +38,7 @@ class Utils {
 
   //TODO add more filters
   static Future<List<Document>> listDocuments(
-    AppOrm appOrm,
+    AppwriteOrm appOrm,
     String typeName, {
     List<String> ids = const [],
   }) {
@@ -54,21 +57,83 @@ class Utils {
   }
 }
 
-class Reflection {
-  static bool isSubtype<T>(Type type) {
-    ClassMirror? cm = reflectClass(type);
+class DatabaseUtils {
+  static Future<bool> createCollection(
+    Databases databases,
+    Repository repository,
+  ) async {
+    final logger = Utils.logger;
+    bool failed = false;
 
-    while (cm != null && cm != reflectClass(Object)) {
-      if (cm.runtimeType == reflectClass(T).runtimeType) {
-        return true;
-      }
-      cm = cm.superclass;
+    await databases
+        .createCollection(
+      databaseId: repository.databaseId,
+      collectionId: Utils.uniqueId(),
+      name: repository.name,
+      documentSecurity: repository.documentSecurity,
+      enabled: repository.enabled,
+      permissions: repository.permissions.map((e) => e.string).toList(),
+    )
+        .then((value) {
+      repository.id = value.$id;
+      repository.createdAt = value.$createdAt;
+      repository.updatedAt = value.$updatedAt;
+
+      logger.log(
+        "Collection \"{}\" created in database \"{}\"",
+        args: [repository.name, repository.databaseId],
+      );
+    }).onError((error, stackTrace) {
+      failed = true;
+      logger.error(
+        "Failed to create collection \"{}\" in database \"{}\"",
+        args: [repository.name, repository.databaseId],
+        exception: error,
+      );
+    });
+
+    if (failed) return false;
+
+    for (var index in repository.indexes) {
+      await databases
+          .createIndex(
+        databaseId: repository.databaseId,
+        collectionId: repository.id,
+        key: index.key,
+        type: index.type.name,
+        attributes: index.attributes.keys.toList(),
+        orders: index.attributes.values.map((e) => e.name).toList(),
+      )
+          .then((value) {
+        logger.log(
+          "Index \"{}\" created in collection \"{}\"",
+          args: [index.key, repository.name],
+        );
+      }).onError((error, stackTrace) {
+        failed = true;
+        logger.error(
+          "Failed to create index \"{}\" in collection \"{}\"",
+          args: [index.key, repository.name],
+          exception: error,
+        );
+      });
     }
 
-    return false;
+    if (failed) return false;
+
+    return true;
+  }
+}
+
+class Reflection {
+  static bool isSubtype(Type type, Type parent) {
+    return reflectClass(type).isSubclassOf(reflectClass(parent));
   }
 
-  static Map<String, VariableMirror> listClassFields(Type type) {
+  static Map<String, VariableMirror> listClassFields(
+    Type type, {
+    Type? annotation,
+  }) {
     final fields = <String, VariableMirror>{};
     ClassMirror? cm = reflectClass(type);
 
@@ -78,6 +143,13 @@ class Reflection {
       });
       cm = cm.superclass;
     }
+
+    fields.removeWhere((key, value) {
+      return annotation != null &&
+          value.metadata
+              .where((e) => e.type.reflectedType == annotation)
+              .isEmpty;
+    });
 
     return fields;
   }

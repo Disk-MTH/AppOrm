@@ -1,37 +1,68 @@
+import "dart:mirrors";
+
 import "package:app_orm/src/attribute.dart";
 import "package:app_orm/src/identifiable.dart";
 import "package:app_orm/src/index.dart";
 import "package:app_orm/src/permission.dart";
+import "package:app_orm/src/utils.dart";
 
+import "entity.dart";
 import "enums.dart";
 import "orm.dart";
 
-class Repository extends Identifiable {
+class Repository<T extends Entity> extends Identifiable<Repository<T>> {
   @Orm(AttributeType.string, modifiers: {
     Modifier.isRequired: true,
     Modifier.size: 20,
   })
-  String databaseId = "";
+  late String databaseId;
 
   @Orm(AttributeType.string, modifiers: {Modifier.isRequired: true})
-  String name = "";
+  late String name;
 
   @Orm(AttributeType.boolean, modifiers: {Modifier.isRequired: true})
-  bool enabled = false;
+  late bool documentSecurity;
 
   @Orm(AttributeType.boolean, modifiers: {Modifier.isRequired: true})
-  bool documentSecurity = false;
+  late bool enabled;
 
   @Orm(AttributeType.native, modifiers: {Modifier.isArray: true})
-  List<Permission> permissions = [];
+  late List<Attribute> attributes;
 
   @Orm(AttributeType.native, modifiers: {Modifier.isArray: true})
-  List<Attribute> attributes = [];
+  late List<Permission> permissions;
 
   @Orm(AttributeType.native, modifiers: {Modifier.isArray: true})
-  List<Index> indexes = [];
+  late List<Index> indexes;
 
-  Repository(Map<String, dynamic> data) : super.empty() {
+  // List<T> entities = [];
+
+  Repository({
+    this.documentSecurity = false,
+    this.enabled = true,
+    this.permissions = const [],
+    this.indexes = const [],
+  }) : super.empty() {
+    name = T.toString();
+    attributes = [];
+    Reflection.listClassFields(T).forEach((name, mirror) {
+      final InstanceMirror? metadata = mirror.metadata
+          .where(
+            (e) => e.reflectee is Orm,
+          )
+          .firstOrNull;
+      if (metadata == null) {
+        return;
+      }
+      final Orm orm = metadata.reflectee;
+      attributes.add(Attribute(name, orm.type, modifiers: orm.modifiers));
+    });
+  }
+
+  Repository.fromMap(Map<String, dynamic> data) : super.empty() {
+    attributes = [];
+    permissions = [];
+    indexes = [];
     deserialize(data);
   }
 }

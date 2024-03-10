@@ -13,13 +13,13 @@ abstract class AbstractLogger {
 
   void warn(
     dynamic message, {
-    Exception? exception,
+    dynamic exception,
     List<dynamic> args = const [],
   });
 
   void error(
     dynamic message, {
-    Exception? exception,
+    dynamic exception,
     List<dynamic> args = const [],
   });
 }
@@ -42,14 +42,14 @@ class DummyLogger implements AbstractLogger {
   @override
   void warn(
     dynamic message, {
-    Exception? exception,
+    dynamic exception,
     List<dynamic> args = const [],
   }) {}
 
   @override
   void error(
     dynamic message, {
-    Exception? exception,
+    dynamic exception,
     List<dynamic> args = const [],
   }) {}
 }
@@ -96,7 +96,7 @@ class Logger implements AbstractLogger {
   @override
   void warn(
     dynamic message, {
-    Exception? exception,
+    dynamic exception,
     List<dynamic> args = const [],
   }) {
     if (level.index <= LogLevel.warn.index) {
@@ -114,7 +114,7 @@ class Logger implements AbstractLogger {
   @override
   void error(
     dynamic message, {
-    Exception? exception,
+    dynamic exception,
     List<dynamic> args = const [],
   }) {
     if (level.index <= LogLevel.error.index) {

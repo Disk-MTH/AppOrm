@@ -1,13 +1,14 @@
-import 'dart:core';
-import 'dart:io';
+import "dart:core";
+import "dart:io";
 
-import 'package:app_orm/src/app_orm.dart';
-import 'package:app_orm/src/entity.dart';
-import 'package:app_orm/src/enums.dart';
-import 'package:app_orm/src/logger.dart';
-import 'package:app_orm/src/orm.dart';
-import 'package:app_orm/src/utils.dart';
-import 'package:dart_appwrite/dart_appwrite.dart';
+import "package:app_orm/src/appwrite_orm.dart";
+import "package:app_orm/src/entity.dart";
+import "package:app_orm/src/enums.dart";
+import "package:app_orm/src/logger.dart";
+import "package:app_orm/src/orm.dart";
+import "package:app_orm/src/repository.dart";
+import "package:app_orm/src/utils.dart";
+import "package:dart_appwrite/dart_appwrite.dart";
 
 void main() async {
   final Map<String, String> envVars = Platform.environment;
@@ -20,15 +21,25 @@ void main() async {
 
   final AbstractLogger logger = Logger();
   Utils.logger = logger;
-  final AppOrm appOrm = AppOrm("65d4bcc6bfbefe3e6b61", databases);
 
-  await appOrm.setup();
+  final AppwriteOrm appOrm = AppwriteOrm("65d4bcc6bfbefe3e6b61", databases);
+  await appOrm.setup([
+    Repository<Teste>(),
+  ], sync: true);
+
+  // await appOrm.loadSkeleton([]);
 
   logger.warn("-------------------------------------------------");
 
-  for (var repo in appOrm.repositories) {
-    // logger.debug(repo.attributes);
-  }
+  // logger.log(appOrm.skeleton);
+
+/*  logger.log(appOrm.getRepository(typeName: "User").permissions);
+  final users = await appOrm.pull<User>();
+  logger.log(users.first.permissions);*/
+
+/*  for (var repo in appOrm.repositories) {
+    logger.debug(repo.attributes);
+  }*/
 
 /*  final List<Address> addresses = await appOrm.pull();
   logger.debug(addresses);
@@ -46,7 +57,7 @@ void main() async {
 /*  final campuses = await appOrm.pull<Campus>();
   logger.debug(campuses);*/
 
-  final test = await appOrm.pull<Address>();
+  // final test = await appOrm.pull<Address>();
   // logger.debug(test);
 
   // logger.log("Finished");
@@ -81,7 +92,7 @@ class User extends Entity<User> {
 
 class Campus extends Entity<Campus> {
   @Orm(AttributeType.string, modifiers: {
-    Modifier.defaultValue: 12,
+    Modifier.isRequired: true,
   })
   late String name;
 
@@ -94,6 +105,12 @@ class Campus extends Entity<Campus> {
   Campus.empty() : super.empty();
 }
 
-class Test extends Entity<Test> {
-  Test.empty() : super.empty();
+class Teste extends Entity<Teste> {
+  @Orm(AttributeType.string, modifiers: {
+    Modifier.isRequired: true,
+    Modifier.size: 100,
+  })
+  late String name;
+
+  Teste.empty() : super.empty();
 }
