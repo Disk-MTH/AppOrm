@@ -7,49 +7,47 @@ import "package:app_orm/src/permission.dart";
 import "package:app_orm/src/utils/reflection.dart";
 import "package:app_orm/src/utils/serializable.dart";
 
-import "entity.dart";
 import "orm.dart";
 import 'utils/enums.dart';
 
-class Repository<T extends Entity> extends Identifiable<Repository<T>> {
+class Repository extends Identifiable<Repository> {
   @Orm(AttributeType.native)
-  late String databaseId;
+  late final String databaseId;
 
   @Orm(AttributeType.native)
-  late String name;
+  late final String name;
 
   @Orm(AttributeType.native)
-  late bool documentSecurity;
+  late final bool documentSecurity;
 
   @Orm(AttributeType.native)
-  late bool enabled;
+  late final bool enabled;
 
   @Orm(AttributeType.native, modifiers: {Modifier.array: true})
-  late List<Attribute> attributes;
+  final List<Attribute> attributes = [];
 
   @Orm(AttributeType.native, modifiers: {Modifier.array: true})
-  late List<Permission> permissions;
+  final List<Permission> permissions = [];
 
   @Orm(AttributeType.native, modifiers: {Modifier.array: true})
-  late List<Index> indexes;
+  final List<Index> indexes = [];
 
-  Repository({
+  Repository(
+    Type type, {
     this.documentSecurity = false,
     this.enabled = true,
-    this.permissions = const [],
-    this.indexes = const [],
-  }) : super.empty() {
-    name = T.toString();
-    attributes = [];
-    //TODO: use new method to select annotation
-    Reflection.listClassFields(T).forEach((name, mirror) {
+    permissions = const [],
+    indexes = const [],
+  }) {
+    name = type.toString();
+    Reflection.listClassFields(type).forEach((name, mirror) {
       final InstanceMirror? metadata = mirror.metadata
           .where((e) =>
               e.reflectee is Orm && e.reflectee.type != AttributeType.native)
           .firstOrNull;
-      if (metadata == null) {
-        return;
-      }
+
+      if (metadata == null) return;
+
       final Orm orm = metadata.reflectee;
       attributes.add(Attribute(
         name,
@@ -57,13 +55,23 @@ class Repository<T extends Entity> extends Identifiable<Repository<T>> {
         modifiers: Map.from(orm.modifiers),
       ));
     });
+    this.permissions.addAll(permissions);
+    this.indexes.addAll(indexes);
   }
 
-  Repository.fromMap(Map<String, dynamic> data) : super.empty() {
-    attributes = [];
-    permissions = [];
-    indexes = [];
+  Repository.fromMap(Map<String, dynamic> data) {
     fromMap(data);
+  }
+
+  //TODO remove, replaced by fromMap
+  Repository.fromExisting(Repository repository) {
+    databaseId = repository.databaseId;
+    name = repository.name;
+    documentSecurity = repository.documentSecurity;
+    enabled = repository.enabled;
+    attributes.addAll(repository.attributes);
+    permissions.addAll(repository.permissions);
+    indexes.addAll(repository.indexes);
   }
 
   @override

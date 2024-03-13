@@ -26,6 +26,8 @@ class Attribute with Serializable<Attribute> {
     });
   }
 
+  //todo function for attribute validity check
+
   Attribute.empty();
 
   Attribute.fromModel(Map<String, dynamic> attribute) {

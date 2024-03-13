@@ -1,18 +1,28 @@
 import "package:app_orm/src/identifiable.dart";
 import "package:app_orm/src/orm.dart";
 import "package:app_orm/src/permission.dart";
+import "package:app_orm/src/repository.dart";
+import "package:app_orm/src/utils/utils.dart";
 
 import 'utils/enums.dart';
 
 abstract class Entity<T> extends Identifiable<T> {
   @Orm(AttributeType.native)
-  String databaseId = "";
+  late final String databaseId;
 
   @Orm(AttributeType.native)
-  String collectionId = "";
+  late final String collectionId;
 
   @Orm(AttributeType.native, modifiers: {Modifier.array: true})
-  List<Permission> permissions = [];
+  final List<Permission> permissions = [];
 
-  Entity.empty() : super.empty();
+  Entity.orm();
+
+  Entity(Repository repository) {
+    id = Utils.uniqueId();
+    createdAt = DateTime.now().toIso8601String();
+    updatedAt = createdAt;
+    databaseId = repository.databaseId;
+    collectionId = repository.id;
+  }
 }

@@ -4,7 +4,6 @@ import "package:app_orm/src/entity.dart";
 import "package:app_orm/src/repository.dart";
 import "package:app_orm/src/utils/database_utils.dart";
 import "package:app_orm/src/utils/reflection.dart";
-import "package:app_orm/src/utils/utils.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
 import "package:dart_appwrite/models.dart";
 
@@ -14,33 +13,35 @@ import 'utils/enums.dart';
 
 class AppwriteOrm extends Identifiable<AppwriteOrm> {
   @Orm(AttributeType.native)
-  String name = "";
+  late final String name;
 
   @Orm(AttributeType.native)
-  bool enabled = false;
+  late final bool enabled;
 
   final Databases databases;
   final List<Repository> _skeleton = [];
 
-  AppwriteOrm(String databaseId, this.databases) : super.empty() {
-    id = databaseId;
-  }
+  AppwriteOrm(this.databases);
 
+  //TODO: Create better migrations
   Future<void> setup(
+    String databaseId,
     List<Repository> skeleton, {
     bool sync = false,
-    bool clean = false,
   }) async {
-    logger.debug("Appwrite ORM setup ${sync ? "with" : "without"} sync mode");
+    logger.debug(
+      "Appwrite ORM setup. Migrate mode: {}",
+      args: [sync],
+    );
 
-    fromMap((await databases.get(databaseId: id)).toMap());
+    fromMap((await databases.get(databaseId: databaseId)).toMap());
 
     logger.debug("Mapped to database \"{}\"", args: [name]);
     _skeleton.clear();
 
-    final List<Collection> collections = await databases
-        .listCollections(databaseId: id)
-        .then((value) => value.collections);
+    final List<Collection> collections = await DatabaseUtils.listCollections(
+      this,
+    );
 
     for (var repository in skeleton) {
       repository.databaseId = id;
@@ -73,8 +74,12 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
           args: [repository.name],
         );
 
-        if (!sync && await DatabaseUtils.updateCollection(this, repository)) {
-          _skeleton.add(repository);
+        //TODO: change by fromMap
+        final newRepository = Repository.fromExisting(repository);
+        if (sync &&
+            await DatabaseUtils.deleteCollection(this, collection["id"]) &&
+            await DatabaseUtils.createCollection(this, newRepository)) {
+          _skeleton.add(newRepository);
         }
         continue;
       }
@@ -90,7 +95,9 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
         args: [collection.name],
       );
 
-      if (clean) await DatabaseUtils.deleteCollection(this, collection.$id);
+      if (sync && !await DatabaseUtils.deleteCollection(this, collection.$id)) {
+        _skeleton.clear();
+      }
     }
 
     if (_skeleton.isEmpty) {
@@ -103,60 +110,26 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
     }
   }
 
-  get skeleton => _skeleton;
-
-  /*Future<void> loadSkeleton(List<Type> skeleton) async {
-    logger.debug("Loading skeleton...");
-
-    final List<Repository> userSkeleton = [];
-
-    for (var type in skeleton) {
-      if (!Reflection.isSubtype(type, Entity)) {
-        throw "Type $type is not a subtype of Entity";
-      }
-      // userSkeleton.add(Repository(type));
-    }
-
-    _skeleton.clear();
-    _skeleton.addAll(userSkeleton);
-
-    logger.debug("User skeleton loaded: {}", args: [_skeleton]);
-
-    */ /*  _skeleton.clear();
-
-    await databases.listCollections(databaseId: id).then((value) {
-      for (var collection in value.collections) {
-        _skeleton[collection.name] = Repository(collection.toMap());
-      }
-    });
-
-    logger.debug(
-      "{} collections found: {}",
-      args: [_skeleton.length, _skeleton.keys],
-    );*/ /*
-  }*/
-
   Future<List<T>> pull<T extends Entity>({
-    bool loadArchitecture = false,
     List<String> ids = const [],
   }) async {
+    final Repository? repository = getRepository(type: T);
+    if (repository == null) {
+      throw "Repository not found for type: $T";
+    }
+
     logger.debug("Listing {}: {}", args: [T, ids.isEmpty ? "all" : ids]);
 
     final List<T> entities = [];
-    final List<Document> documents = await Utils.listDocuments(
+    final List<Document> documents = await DatabaseUtils.listDocuments(
       this,
-      T.toString(),
+      repository,
       ids: ids,
     );
 
     for (var document in documents) {
-      final T entity = Reflection.instantiate(
-        T,
-        constructor: "empty",
-      ).deserialize(document.data);
-
-      Reflection.setFieldValue(entity, getRepository(type: T),
-          name: "repository");
+      final T entity =
+          Reflection.instantiate(T, constructor: "orm").fromMap(document.data);
 
       await _fetchEntity(entity, []);
       entities.add(entity);
@@ -165,10 +138,53 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
     return entities;
   }
 
-  // List<Repository> get repositories => _skeleton.values.toList();
+  Future<bool> push(Entity entity) async {
+    final Repository? repository = getRepository(entity: entity);
+    if (repository == null) {
+      throw "Repository not found for type: ${entity.runtimeType}";
+    }
 
-  Repository getRepository({String? typeName, Type? type, Entity? entity}) {
-    /*if ((typeName == null && type == null && entity == null) ||
+    logger.debug("Pushing {}", args: [entity.runtimeType]);
+
+    await DatabaseUtils.createDocument(
+      this,
+      repository,
+      entity,
+    );
+
+    /*final Document document = Document(
+      data: entity.serialize(),
+      collectionId: repository.id,
+    );
+
+    if (entity.id == null) {
+      final Response response = await databases.createDocument(
+        databaseId: id,
+        collectionId: repository.id,
+        document: document,
+      );
+
+      entity.id = response.$id;
+      entity.createdAt = response.$createdAt;
+      entity.updatedAt = response.$updatedAt;
+    } else {
+      final Response response = await databases.updateDocument(
+        databaseId: id,
+        collectionId: repository.id,
+        documentId: entity.id!,
+        document: document,
+      );
+
+      entity.updatedAt = response.$updatedAt;
+    }*/
+
+    return true;
+  }
+
+  get skeleton => _skeleton;
+
+  Repository? getRepository({String? typeName, Type? type, Entity? entity}) {
+    if ((typeName == null && type == null && entity == null) ||
         (typeName != null && type != null && entity != null)) {
       throw "You must provide either a typeName, a type or an entity";
     }
@@ -176,12 +192,7 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
     if (type != null) typeName = type.toString();
     if (entity != null) typeName = entity.runtimeType.toString();
 
-    if (!_skeleton.containsKey(typeName)) {
-      throw "Repository not found for type \"$typeName\"";
-    }
-
-    return _skeleton[typeName.toString()]!;*/
-    return _skeleton.first;
+    return _skeleton.where((e) => e.name == typeName).firstOrNull;
   }
 
   Future<void> _fetchEntity(
@@ -241,15 +252,17 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
     }
   }
 
+  //TODO rename
   Future<void> _test(
     Identifiable origin,
     List<Identifiable> references,
     Type type,
     String foreignKey,
   ) async {
-    final data = (await Utils.listDocuments(
+    final repository = getRepository(type: type)!;
+    final data = (await DatabaseUtils.listDocuments(
       this,
-      type.toString(),
+      repository,
       ids: [foreignKey],
     ))
         .first
@@ -257,26 +270,10 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
 
     final entity = Reflection.instantiate(
       type,
-      constructor: "empty",
+      constructor: "orm",
     ).deserialize(data);
 
     await _fetchEntity(entity, [origin, ...references]);
     await _fetchEntity(origin, [entity, ...references]);
-
-    /*final data = (await Utils.listDocuments(
-      this,
-      mirror.type.typeArguments.first.reflectedType.toString(),
-      ids: [foreignKey],
-    ))
-        .first
-        .data;
-
-    final entity = Reflection.instantiate(
-      mirror.type.typeArguments.first.reflectedType,
-      constructor: "empty",
-    ).deserialize(data);
-
-    await _fetchEntity(entity, [origin, ...references]);
-    await _fetchEntity(origin, [entity, ...references]);*/
   }
 }

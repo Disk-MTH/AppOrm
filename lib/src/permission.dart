@@ -83,7 +83,6 @@ class Permission with Serializable<Permission> {
     resource = resourceString;
   }
 
-  //TODO: test
   @override
   Map<String, dynamic> serialize() {
     return {
@@ -94,7 +93,6 @@ class Permission with Serializable<Permission> {
     };
   }
 
-  //TODO: test
   @override
   Permission deserialize(Map<String, dynamic> data) {
     role = Role.values.firstWhere((e) => e.name == data["role"]);

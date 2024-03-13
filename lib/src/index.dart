@@ -39,25 +39,27 @@ class Index with Serializable<Index> {
     error = index["error"].isEmpty ? null : index["error"];
   }
 
-  //TODO: test
   @override
   Map<String, dynamic> serialize() {
     return {
       "key": key,
       "type": type.name,
       "attributes": attributes.map((key, value) => MapEntry(key, value.name)),
+      "status": status?.name,
+      "error": error,
     };
   }
 
-  //TODO: test
   @override
   Index deserialize(Map<String, dynamic> data) {
     key = data["key"];
     type = IndexType.values.firstWhere((e) => e.name == data["type"]);
-    attributes = data["attributes"].map((key, value) => MapEntry(
-          key,
-          SortOrder.values.firstWhere((e) => e.name == value.toLowerCase()),
-        ));
+    attributes = {};
+    data["attributes"].forEach((key, value) {
+      attributes[key] = SortOrder.values.firstWhere(
+        (e) => e.name == value.toLowerCase(),
+      );
+    });
     status = Status.values.where((e) => e.name == data["status"]).firstOrNull;
     error = data["error"];
     return this;

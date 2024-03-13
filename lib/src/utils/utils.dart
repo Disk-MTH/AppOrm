@@ -1,10 +1,7 @@
 import "dart:convert";
 import "dart:math";
 
-import "package:app_orm/src/appwrite_orm.dart";
 import "package:app_orm/src/utils/serializable.dart";
-import "package:dart_appwrite/dart_appwrite.dart";
-import "package:dart_appwrite/models.dart";
 
 import 'logger.dart';
 
@@ -41,25 +38,5 @@ class Utils {
       return input.map((e) => beautify(e)).join("\n");
     }
     return input.toString();
-  }
-
-  //TODO add more filters
-  static Future<List<Document>> listDocuments(
-    AppwriteOrm appOrm,
-    String typeName, {
-    List<String> ids = const [],
-  }) {
-    logger.debug(
-      "Retrieving documents for {}: {}",
-      args: [typeName, ids.isEmpty ? "all" : ids],
-    );
-
-    return appOrm.databases.listDocuments(
-      databaseId: appOrm.id,
-      collectionId: appOrm.getRepository(typeName: typeName).id,
-      queries: [
-        if (ids.isNotEmpty) Query.equal("\$id", ids),
-      ],
-    ).then((value) => value.documents);
   }
 }

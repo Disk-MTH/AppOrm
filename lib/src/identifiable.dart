@@ -10,17 +10,16 @@ class Identifiable<T> with Serializable<T> {
   final Map<String, List<String>> foreignKeys = {};
 
   @Orm(AttributeType.native)
-  late String id;
+  late final String id;
 
   @Orm(AttributeType.native)
-  late String createdAt;
+  late final String createdAt;
 
   @Orm(AttributeType.native)
-  late String updatedAt;
-
-  Identifiable.empty();
+  late final String updatedAt;
 
   T fromMap(Map<String, dynamic> data) {
+    if (data.isEmpty) return this as T;
     Map.from(data).forEach((key, value) {
       if (key.startsWith("\$")) {
         data[key.substring(1)] = data.remove(key);
@@ -102,7 +101,7 @@ class Identifiable<T> with Serializable<T> {
 
   @override
   T deserialize(Map<String, dynamic> data) {
-    logger.error("unique");
+    logger.error("to implement");
     return this as T;
   }
 

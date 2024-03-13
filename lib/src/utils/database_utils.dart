@@ -1,10 +1,31 @@
+import "package:app_orm/src/entity.dart";
 import "package:app_orm/src/repository.dart";
 import "package:app_orm/src/utils/utils.dart";
+import "package:dart_appwrite/dart_appwrite.dart";
+import "package:dart_appwrite/models.dart";
 
 import "../appwrite_orm.dart";
 import 'enums.dart';
 
 class DatabaseUtils {
+  static Future<List<Collection>> listCollections(AppwriteOrm orm) async {
+    final logger = Utils.logger;
+    final List<Collection> collections = [];
+
+    await orm.databases
+        .listCollections(databaseId: orm.id)
+        .then((value) => collections.addAll(value.collections))
+        .onError((error, stackTrace) {
+      logger.error(
+        "Failed to list collections in database \"{}\"",
+        args: [orm.name],
+        exception: "$error\n$stackTrace",
+      );
+    });
+
+    return collections;
+  }
+
   static Future<bool> createCollection(
     AppwriteOrm orm,
     Repository repository,
@@ -340,7 +361,7 @@ class DatabaseUtils {
     }
 
     do {
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(Duration(milliseconds: 50));
     } while ((await orm.databases.listAttributes(
       databaseId: orm.id,
       collectionId: repository.id,
@@ -381,13 +402,6 @@ class DatabaseUtils {
     return true;
   }
 
-  static Future<bool> updateCollection(
-    AppwriteOrm orm,
-    Repository repository,
-  ) async {
-    return false;
-  }
-
   static Future<bool> deleteCollection(
     AppwriteOrm orm,
     String id,
@@ -416,6 +430,71 @@ class DatabaseUtils {
 
     if (failed) return false;
 
+    return true;
+  }
+
+  //TODO: add more queries
+  static Future<List<Document>> listDocuments(
+    AppwriteOrm orm,
+    Repository repository, {
+    List<String> ids = const [],
+  }) async {
+    final logger = Utils.logger;
+    final List<Document> documents = [];
+
+    await orm.databases
+        .listDocuments(
+          databaseId: orm.id,
+          collectionId: repository.id,
+          queries: [
+            if (ids.isNotEmpty) Query.equal("\$id", ids),
+          ],
+        )
+        .then((value) => documents.addAll(value.documents))
+        .onError((error, stackTrace) {
+          logger.error(
+            "Failed to list documents in collection \"{}\" from database \"{}\"",
+            args: [repository.name, orm.name],
+            exception: "$error\n$stackTrace",
+          );
+        });
+
+    return documents;
+  }
+
+  static Future<bool> createDocument(
+    AppwriteOrm orm,
+    Repository repository,
+    Entity entity,
+  ) async {
+    final logger = Utils.logger;
+    bool failed = false;
+
+    await orm.databases.createDocument(
+      databaseId: orm.id,
+      collectionId: repository.id,
+      documentId: Utils.uniqueId(),
+      permissions: entity.permissions.map((e) => e.string).toList(),
+      data: {},
+    ).then((value) {
+      entity.id = value.$id;
+      entity.createdAt = value.$createdAt;
+      entity.updatedAt = value.$updatedAt;
+
+      logger.log(
+        "Document \"{}\" created in collection \"{}\" from database \"{}\"",
+        args: [entity.id, repository.name, orm.name],
+      );
+    }).onError((error, stackTrace) {
+      failed = true;
+      logger.error(
+        "Failed to create document in collection \"{}\" from database \"{}\"",
+        args: [repository.name, orm.name],
+        exception: "$error\n$stackTrace",
+      );
+    });
+
+    if (failed) return false;
     return true;
   }
 }

@@ -25,59 +25,91 @@ void main() async {
   final AbstractLogger logger = Logger();
   Utils.logger = logger;
 
-  final AppwriteOrm appOrm = AppwriteOrm("65d4bcc6bfbefe3e6b61", databases);
-  await appOrm.setup([
-    Repository<Teste>(
-      documentSecurity: true,
-      enabled: false,
-      permissions: [
-        permission.Permission(Crud.create, enums.Role.any),
-        permission.Permission(Crud.create, enums.Role.user, id: "exampleId"),
-        permission.Permission(
-          Crud.create,
-          enums.Role.user,
-          id: "exampleId",
-          resource: Verification.verified,
-        ),
-        permission.Permission(
-          Crud.create,
-          enums.Role.user,
-          id: "exampleId",
-          resource: Verification.unverified,
-        ),
-        permission.Permission(Crud.create, enums.Role.users),
-        permission.Permission(
-          Crud.create,
-          enums.Role.users,
-          resource: Verification.verified,
-        ),
-        permission.Permission(
-          Crud.create,
-          enums.Role.users,
-          resource: Verification.unverified,
-        ),
-        permission.Permission(Crud.create, enums.Role.guests),
-        permission.Permission(Crud.create, enums.Role.team, id: "exampleId"),
-        permission.Permission(
-          Crud.create,
-          enums.Role.team,
-          id: "exampleId",
-          resource: "exampleRole",
-        ),
-        permission.Permission(Crud.create, enums.Role.member, id: "exampleId"),
-        permission.Permission(
-          Crud.create,
-          enums.Role.label,
-          id: "exampleLabel",
+  final AppwriteOrm appOrm = AppwriteOrm(databases);
+  await appOrm.setup(
+      "65d4bcc6bfbefe3e6b61",
+      [
+        Repository(
+          Teste,
+          documentSecurity: true,
+          enabled: false,
+          permissions: [
+            permission.Permission(Crud.create, enums.Role.any),
+            permission.Permission(Crud.create, enums.Role.user,
+                id: "exampleId"),
+            permission.Permission(
+              Crud.create,
+              enums.Role.user,
+              id: "exampleId",
+              resource: Verification.verified,
+            ),
+            permission.Permission(
+              Crud.create,
+              enums.Role.user,
+              id: "exampleId",
+              resource: Verification.unverified,
+            ),
+            permission.Permission(Crud.create, enums.Role.users),
+            permission.Permission(
+              Crud.create,
+              enums.Role.users,
+              resource: Verification.verified,
+            ),
+            permission.Permission(
+              Crud.create,
+              enums.Role.users,
+              resource: Verification.unverified,
+            ),
+            permission.Permission(Crud.create, enums.Role.guests),
+            permission.Permission(Crud.create, enums.Role.team,
+                id: "exampleId"),
+            permission.Permission(
+              Crud.create,
+              enums.Role.team,
+              id: "exampleId",
+              resource: "exampleRole",
+            ),
+            permission.Permission(Crud.create, enums.Role.member,
+                id: "exampleId"),
+            permission.Permission(
+              Crud.create,
+              enums.Role.label,
+              id: "exampleLabel",
+            ),
+          ],
+          indexes: [
+            Index("test_index", IndexType.key, {"test": SortOrder.asc}),
+          ],
         ),
       ],
-      indexes: [
-        Index("test_index", IndexType.key, {"test": SortOrder.asc}),
-      ],
-    ),
-  ], sync: true);
+      sync: true);
 
-  // await appOrm.loadSkeleton([]);
+  final testeRepo = appOrm.getRepository(typeName: "Teste")!;
+
+  logger.debug(await appOrm.pull<Teste>());
+
+  final teste = Teste(testeRepo, "Teste");
+  logger.log(teste);
+
+  await appOrm.push(teste);
+  logger.debug(await appOrm.pull<Teste>());
+
+/*  final p = Teste(testeRepo, "Teste");
+
+  logger.debug(p);
+
+  final p2 = p.serialize();
+
+  logger.debug(p2);
+
+  final p3 = Teste(testeRepo, "fffff").deserialize(p2);
+
+  logger.debug(p3);*/
+
+/*  Teste teste2 = Teste("Teste2");
+
+  await appOrm.push(teste);
+  await appOrm.push(teste2);*/
 
   logger.warn("-------------------------------------------------");
 
@@ -114,7 +146,7 @@ void main() async {
   exit(0);
 }
 
-class Address extends Entity<Address> {
+/*class Address extends Entity<Address> {
   @Orm(AttributeType.string, modifiers: {
     Modifier.required: true,
     Modifier.size: 100,
@@ -153,7 +185,7 @@ class Campus extends Entity<Campus> {
   List<User> users = [];
 
   Campus.empty() : super.empty();
-}
+}*/
 
 class Teste extends Entity<Teste> {
   @Orm(AttributeType.string, modifiers: {
@@ -162,5 +194,7 @@ class Teste extends Entity<Teste> {
   })
   late String test;
 
-  Teste.empty() : super.empty();
+  Teste.orm() : super.orm();
+
+  Teste(super.repository, this.test);
 }
