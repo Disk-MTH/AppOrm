@@ -2,7 +2,7 @@ import 'package:app_orm/src/utils/serializable.dart';
 
 import 'utils/enums.dart';
 
-class Attribute with Serializable<Attribute> {
+class Attribute with Serializable {
   static const Map<Modifier, dynamic> defaultModifiers = {
     Modifier.required: false,
     Modifier.array: false,

@@ -7,9 +7,9 @@ import "package:app_orm/src/index.dart";
 import "package:app_orm/src/orm.dart";
 import "package:app_orm/src/permission.dart" as permission;
 import "package:app_orm/src/repository.dart";
-import 'package:app_orm/src/utils/enums.dart' as enums;
-import 'package:app_orm/src/utils/enums.dart';
-import 'package:app_orm/src/utils/logger.dart';
+import "package:app_orm/src/utils/enums.dart" as enums;
+import "package:app_orm/src/utils/enums.dart";
+import "package:app_orm/src/utils/logger.dart";
 import "package:app_orm/src/utils/utils.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
 
@@ -27,10 +27,50 @@ void main() async {
 
   final AppwriteOrm appOrm = AppwriteOrm(databases);
   await appOrm.setup(
-      "65d4bcc6bfbefe3e6b61",
-      [
-        Repository(
-          Teste,
+    "65d4bcc6bfbefe3e6b61",
+    [
+      AddressRepository(),
+      Repository<User>(),
+    ],
+    sync: true,
+  );
+
+  /*final addressRepository = appOrm.getRepository<AddressRepository>()!;
+
+  final addressRepositorySerialized = addressRepository.serialize();
+
+  final addressRepositoryDeserialized =
+      AddressRepository.fromMap(addressRepositorySerialized);
+
+  logger.log(addressRepositoryDeserialized);*/
+
+  final aRepo = appOrm.getRepository<AddressRepository>()!;
+  final uRepo = appOrm.getRepository<Repository<User>>()!;
+
+  final a = aRepo.instantiate(Address("Paris"));
+  final a2 = aRepo.instantiate(Address("Lyon"));
+
+  final u = uRepo.instantiate(User("John", [a, a2]));
+
+  logger.log(u);
+
+  exit(0);
+}
+
+class Address extends Entity {
+  @Orm(AttributeType.string, modifiers: {
+    Modifier.required: true,
+    Modifier.size: 100,
+  })
+  late String city;
+
+  @Orm(AttributeType.entity)
+  Address(this.city);
+}
+
+class AddressRepository extends Repository<Address> {
+  AddressRepository()
+      : super(
           documentSecurity: true,
           enabled: false,
           permissions: [
@@ -78,123 +118,26 @@ void main() async {
             ),
           ],
           indexes: [
-            Index("test_index", IndexType.key, {"test": SortOrder.asc}),
+            Index("test_index", IndexType.key, {"city": SortOrder.asc}),
           ],
-        ),
-      ],
-      sync: true);
+        );
 
-  final testeRepo = appOrm.getRepository(typeName: "Teste")!;
+  AddressRepository.fromMap(super.data) : super.fromMap();
 
-  logger.debug(await appOrm.pull<Teste>());
-
-  final teste = Teste(testeRepo, "Teste");
-  logger.log(teste);
-
-  await appOrm.push(teste);
-  logger.debug(await appOrm.pull<Teste>());
-
-/*  final p = Teste(testeRepo, "Teste");
-
-  logger.debug(p);
-
-  final p2 = p.serialize();
-
-  logger.debug(p2);
-
-  final p3 = Teste(testeRepo, "fffff").deserialize(p2);
-
-  logger.debug(p3);*/
-
-/*  Teste teste2 = Teste("Teste2");
-
-  await appOrm.push(teste);
-  await appOrm.push(teste2);*/
-
-  logger.warn("-------------------------------------------------");
-
-  // logger.log(appOrm.skeleton);
-
-/*  logger.log(appOrm.getRepository(typeName: "User").permissions);
-  final users = await appOrm.pull<User>();
-  logger.log(users.first.permissions);*/
-
-/*  for (var repo in appOrm.repositories) {
-    logger.debug(repo.attributes);
-  }*/
-
-/*  final List<Address> addresses = await appOrm.pull();
-  logger.debug(addresses);
-
-  logger.log("-----------------------------------------\n");
-
-  final users = await appOrm.pull<User>();
-  logger.debug(users);
-
-  logger.log("-----------------------------------------\n");
-
-  final campuses = await appOrm.pull<Campus>();
-  logger.debug(campuses);*/
-
-/*  final campuses = await appOrm.pull<Campus>();
-  logger.debug(campuses);*/
-
-  // final test = await appOrm.pull<Address>();
-  // logger.debug(test);
-
-  // logger.log("Finished");
-  exit(0);
+  void test() {
+    print('test');
+  }
 }
 
-/*class Address extends Entity<Address> {
-  @Orm(AttributeType.string, modifiers: {
-    Modifier.required: true,
-    Modifier.size: 100,
-  })
-  late String city;
-
-  Address.empty() : super.empty();
-}
-
-class User extends Entity<User> {
+class User extends Entity {
   @Orm(AttributeType.string, modifiers: {
     Modifier.required: true,
     Modifier.size: 100,
   })
   late String name;
-
-  @Orm(AttributeType.entity)
-  late Address home;
-
-  @Orm(AttributeType.entity)
-  late Campus campus;
-
-  User.empty() : super.empty();
-}
-
-class Campus extends Entity<Campus> {
-  @Orm(AttributeType.string, modifiers: {
-    Modifier.required: true,
-  })
-  late String name;
-
-  @Orm(AttributeType.entity)
-  late Address address;
 
   @Orm(AttributeType.entity, modifiers: {Modifier.array: true})
-  List<User> users = [];
+  late List<Address> addresses;
 
-  Campus.empty() : super.empty();
-}*/
-
-class Teste extends Entity<Teste> {
-  @Orm(AttributeType.string, modifiers: {
-    Modifier.required: true,
-    Modifier.size: 100,
-  })
-  late String test;
-
-  Teste.orm() : super.orm();
-
-  Teste(super.repository, this.test);
+  User(this.name, this.addresses);
 }

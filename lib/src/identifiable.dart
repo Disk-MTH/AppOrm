@@ -6,7 +6,7 @@ import 'package:app_orm/src/utils/serializable.dart';
 import "orm.dart";
 import 'utils/enums.dart';
 
-class Identifiable<T> with Serializable<T> {
+class Identifiable with Serializable {
   final Map<String, List<String>> foreignKeys = {};
 
   @Orm(AttributeType.native)
@@ -18,8 +18,8 @@ class Identifiable<T> with Serializable<T> {
   @Orm(AttributeType.native)
   late final String updatedAt;
 
-  T fromMap(Map<String, dynamic> data) {
-    if (data.isEmpty) return this as T;
+  Identifiable fromMap(Map<String, dynamic> data) {
+    if (data.isEmpty) return this;
     Map.from(data).forEach((key, value) {
       if (key.startsWith("\$")) {
         data[key.substring(1)] = data.remove(key);
@@ -68,41 +68,52 @@ class Identifiable<T> with Serializable<T> {
           field.add(item);
         }
       } else {
-        Reflection.setFieldValue(this, value, mirror: mirror);
+        Reflection.setFieldValue(this, value, variable: mirror);
       }
     });
-    return this as T;
+    return this;
   }
 
-  //TODO patch for cyclic references
   @override
   Map<String, dynamic> serialize() {
     final Map<String, dynamic> data = {};
-    Reflection.listInstanceFields(this).forEach((key, value) {
-      if (value.variableMirror.metadata
+    Reflection.listInstanceFields(this).forEach((name, variable) {
+      if (variable.variableMirror.metadata
           .where((e) => e.reflectee is Orm)
           .isEmpty) {
         return;
       }
 
-      /*if (!data.containsKey(key)) {
-        if (value.value is Serializable) {
-          data[key] = value.value.serialize();
-        } else if (value.value is List<Serializable>) {
-          data[key] = value.value.map((e) => e.serialize()).toList();
-        } else {
-          data[key] = value.value;
-        }
-      }*/
-      data[key] = value.value;
+      if (variable.value is Serializable) {
+        data[name] = variable.value.serialize();
+      } else if (variable.value is List<Serializable>) {
+        data[name] = variable.value.map((e) => e.serialize()).toList();
+      } else {
+        data[name] = variable.value;
+      }
     });
     return data;
   }
 
+  //TODO redo this
   @override
-  T deserialize(Map<String, dynamic> data) {
-    logger.error("to implement");
-    return this as T;
+  Identifiable deserialize(Map<String, dynamic> data) {
+    print(data);
+    Reflection.listClassFields(runtimeType, annotation: Orm)
+        .forEach((name, variable) {
+      final Orm annotation = variable.metadata
+          .firstWhere(
+            (e) => e.reflectee is Orm,
+          )
+          .reflectee;
+
+      Reflection.setFieldValue(
+        this,
+        data[name],
+        variable: variable,
+      );
+    });
+    return this;
   }
 
   @override

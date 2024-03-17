@@ -2,7 +2,7 @@ import 'package:app_orm/src/utils/serializable.dart';
 
 import 'utils/enums.dart';
 
-class Permission with Serializable<Permission> {
+class Permission with Serializable {
   late Crud crud;
   late Role role;
   late String? id;

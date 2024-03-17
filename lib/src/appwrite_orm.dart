@@ -1,9 +1,5 @@
-import "dart:mirrors";
-
-import "package:app_orm/src/entity.dart";
 import "package:app_orm/src/repository.dart";
 import "package:app_orm/src/utils/database_utils.dart";
-import "package:app_orm/src/utils/reflection.dart";
 import "package:dart_appwrite/dart_appwrite.dart";
 import "package:dart_appwrite/models.dart";
 
@@ -11,7 +7,7 @@ import "identifiable.dart";
 import "orm.dart";
 import 'utils/enums.dart';
 
-class AppwriteOrm extends Identifiable<AppwriteOrm> {
+class AppwriteOrm extends Identifiable {
   @Orm(AttributeType.native)
   late final String name;
 
@@ -52,7 +48,7 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
               ?.toMap() ??
           {};
 
-      if (collection.isEmpty) {
+      if (false && collection.isEmpty) {
         logger.warn(
           "Collection \"{}\" not found in database \"{}\"",
           args: [repository.name, name],
@@ -68,7 +64,7 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
       repository.createdAt = collection["\$createdAt"];
       repository.updatedAt = collection["\$updatedAt"];
 
-      if (!repository.equals(Repository.fromMap(collection))) {
+      if (false && !repository.equals(Repository.fromMap(collection))) {
         logger.warn(
           "Collection \"{}\" has differences with the skeleton",
           args: [repository.name],
@@ -110,7 +106,7 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
     }
   }
 
-  Future<List<T>> pull<T extends Entity>({
+  /*Future<List<T>> pull<T extends Entity>({
     List<String> ids = const [],
   }) async {
     final Repository? repository = getRepository(type: T);
@@ -146,44 +142,16 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
 
     logger.debug("Pushing {}", args: [entity.runtimeType]);
 
-    await DatabaseUtils.createDocument(
+    return await DatabaseUtils.createDocument(
       this,
       repository,
       entity,
     );
+  }*/
 
-    /*final Document document = Document(
-      data: entity.serialize(),
-      collectionId: repository.id,
-    );
+  // get skeleton => _skeleton;
 
-    if (entity.id == null) {
-      final Response response = await databases.createDocument(
-        databaseId: id,
-        collectionId: repository.id,
-        document: document,
-      );
-
-      entity.id = response.$id;
-      entity.createdAt = response.$createdAt;
-      entity.updatedAt = response.$updatedAt;
-    } else {
-      final Response response = await databases.updateDocument(
-        databaseId: id,
-        collectionId: repository.id,
-        documentId: entity.id!,
-        document: document,
-      );
-
-      entity.updatedAt = response.$updatedAt;
-    }*/
-
-    return true;
-  }
-
-  get skeleton => _skeleton;
-
-  Repository? getRepository({String? typeName, Type? type, Entity? entity}) {
+/*  Repository? getRepository({String? typeName, Type? type, Entity? entity}) {
     if ((typeName == null && type == null && entity == null) ||
         (typeName != null && type != null && entity != null)) {
       throw "You must provide either a typeName, a type or an entity";
@@ -193,9 +161,13 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
     if (entity != null) typeName = entity.runtimeType.toString();
 
     return _skeleton.where((e) => e.name == typeName).firstOrNull;
+  }*/
+
+  T? getRepository<T extends Repository>() {
+    return _skeleton.whereType<T>().firstOrNull;
   }
 
-  Future<void> _fetchEntity(
+  /*Future<void> _fetchEntity(
     Identifiable origin,
     List<Identifiable> references,
   ) async {
@@ -250,10 +222,10 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
         }
       }
     }
-  }
+  }*/
 
   //TODO rename
-  Future<void> _test(
+  /*Future<void> _test(
     Identifiable origin,
     List<Identifiable> references,
     Type type,
@@ -275,5 +247,5 @@ class AppwriteOrm extends Identifiable<AppwriteOrm> {
 
     await _fetchEntity(entity, [origin, ...references]);
     await _fetchEntity(origin, [entity, ...references]);
-  }
+  }*/
 }

@@ -53,14 +53,15 @@ class Reflection {
     dynamic instance,
     dynamic value, {
     String? name,
-    VariableMirror? mirror,
+    VariableMirror? variable,
   }) {
-    if ((name == null && mirror == null) || (name != null && mirror != null)) {
+    if ((name == null && variable == null) ||
+        (name != null && variable != null)) {
       throw "You must provide a field OR a variable mirror";
     }
 
     reflect(instance).setField(
-      name != null ? Symbol(name) : mirror!.simpleName,
+      name != null ? Symbol(name) : variable!.simpleName,
       value,
     );
   }
