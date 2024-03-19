@@ -64,6 +64,9 @@ class Repository<T extends Entity> extends Identifiable {
     }
   }
 
+  Repository.orm(super.data) : super.orm();
+
+  //TODO remove, replaced by orm
   Repository.fromMap(Map<String, dynamic> data) {
     deserialize(data);
   }
@@ -95,7 +98,7 @@ class Repository<T extends Entity> extends Identifiable {
         !other.indexes.any((o) => !indexes.any((e) => o.equals(e)));
   }
 
-  T instantiate(T entity) {
+  T init(T entity) {
     entity.id = Utils.uniqueId();
     entity.createdAt = DateTime.now().toIso8601String();
     entity.updatedAt = entity.createdAt;

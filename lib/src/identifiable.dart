@@ -1,4 +1,4 @@
-import "dart:mirrors";
+import 'dart:mirrors';
 
 import "package:app_orm/src/utils/reflection.dart";
 import 'package:app_orm/src/utils/serializable.dart';
@@ -17,6 +17,12 @@ class Identifiable with Serializable {
 
   @Orm(AttributeType.native)
   late final String updatedAt;
+
+  Identifiable();
+
+  Identifiable.orm(Map<String, dynamic> data) {
+    deserialize(data);
+  }
 
   Identifiable fromMap(Map<String, dynamic> data) {
     if (data.isEmpty) return this;
@@ -95,23 +101,49 @@ class Identifiable with Serializable {
     return data;
   }
 
-  //TODO redo this
   @override
   Identifiable deserialize(Map<String, dynamic> data) {
-    print(data);
-    Reflection.listClassFields(runtimeType, annotation: Orm)
-        .forEach((name, variable) {
-      final Orm annotation = variable.metadata
-          .firstWhere(
-            (e) => e.reflectee is Orm,
-          )
-          .reflectee;
+    Reflection.listClassFields(runtimeType).forEach((name, variable) {
+      final Orm? annotation = variable.metadata
+          .where((e) => e.reflectee is Orm)
+          .firstOrNull
+          ?.reflectee;
 
-      Reflection.setFieldValue(
-        this,
-        data[name],
-        variable: variable,
-      );
+      if (annotation == null) return;
+
+      try {
+        final bool isEntity = annotation.type == AttributeType.entity;
+        if (annotation.modifiers[Modifier.array] == true) {
+          final field = Reflection.getField(
+            this,
+            MirrorSystem.getName(variable.simpleName),
+          );
+          field.clear();
+          data[name].forEach((e) {
+            field.add(
+              isEntity
+                  ? Reflection.instantiate(
+                      variable.type.typeArguments.first.reflectedType,
+                      constructor: "orm",
+                      args: [e],
+                    )
+                  : e,
+            );
+          });
+        } else {
+          Reflection.setFieldValue(
+            this,
+            isEntity
+                ? Reflection.instantiate(
+                    variable.type.reflectedType,
+                    constructor: "orm",
+                    args: [data[name]],
+                  )
+                : data[name],
+            variable: variable,
+          );
+        }
+      } catch (_) {}
     });
     return this;
   }

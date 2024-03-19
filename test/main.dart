@@ -47,12 +47,16 @@ void main() async {
   final aRepo = appOrm.getRepository<AddressRepository>()!;
   final uRepo = appOrm.getRepository<Repository<User>>()!;
 
-  final a = aRepo.instantiate(Address("Paris"));
-  final a2 = aRepo.instantiate(Address("Lyon"));
+  final a = aRepo.init(Address("Paris"));
+  final a2 = aRepo.init(Address("Lyon"));
 
-  final u = uRepo.instantiate(User("John", [a, a2]));
-
+  final u = uRepo.init(User("John", ["Doe", "X"], a, [a, a2]));
   logger.log(u);
+
+  final uS = u.serialize();
+
+  final uD = User.orm(uS);
+  logger.log(uD);
 
   exit(0);
 }
@@ -64,8 +68,9 @@ class Address extends Entity {
   })
   late String city;
 
-  @Orm(AttributeType.entity)
   Address(this.city);
+
+  Address.orm(super.data) : super.orm();
 }
 
 class AddressRepository extends Repository<Address> {
@@ -122,7 +127,7 @@ class AddressRepository extends Repository<Address> {
           ],
         );
 
-  AddressRepository.fromMap(super.data) : super.fromMap();
+  AddressRepository.orm(super.data) : super.orm();
 
   void test() {
     print('test');
@@ -136,8 +141,18 @@ class User extends Entity {
   })
   late String name;
 
-  @Orm(AttributeType.entity, modifiers: {Modifier.array: true})
-  late List<Address> addresses;
+  @Orm(AttributeType.string, modifiers: {
+    Modifier.array: true,
+  })
+  List<String> names = [];
 
-  User(this.name, this.addresses);
+  @Orm(AttributeType.entity)
+  late Address address;
+
+  @Orm(AttributeType.entity, modifiers: {Modifier.array: true})
+  List<Address> addresses = [];
+
+  User(this.name, this.names, this.address, this.addresses);
+
+  User.orm(super.data) : super.orm();
 }
