@@ -2,6 +2,7 @@ import 'dart:mirrors';
 
 import "package:app_orm/src/utils/reflection.dart";
 import 'package:app_orm/src/utils/serializable.dart';
+import 'package:collection/collection.dart';
 
 import "orm.dart";
 import 'utils/enums.dart';
@@ -24,7 +25,7 @@ class Identifiable with Serializable {
     deserialize(data);
   }
 
-  Identifiable fromMap(Map<String, dynamic> data) {
+  /*Identifiable fromMap(Map<String, dynamic> data) {
     if (data.isEmpty) return this;
     Map.from(data).forEach((key, value) {
       if (key.startsWith("\$")) {
@@ -44,7 +45,6 @@ class Identifiable with Serializable {
       name = type == AttributeType.entity ? "${name}_ORMID" : name;
 
       dynamic value = data[name];
-      annotation.validate("");
 
       if (type == AttributeType.entity) {
         if (modifiers[Modifier.array] == true) {
@@ -78,7 +78,7 @@ class Identifiable with Serializable {
       }
     });
     return this;
-  }
+  }*/
 
   @override
   Map<String, dynamic> serialize() {
@@ -105,8 +105,7 @@ class Identifiable with Serializable {
   Identifiable deserialize(Map<String, dynamic> data) {
     Reflection.listClassFields(runtimeType).forEach((name, variable) {
       final Orm? annotation = variable.metadata
-          .where((e) => e.reflectee is Orm)
-          .firstOrNull
+          .firstWhereOrNull((e) => e.reflectee is Orm)
           ?.reflectee;
 
       if (annotation == null) return;
@@ -145,14 +144,7 @@ class Identifiable with Serializable {
         }
       } catch (_) {}
     });
-    return this;
-  }
 
-  @override
-  bool equals(Serializable other) {
-    return other is Identifiable &&
-        other.id == id &&
-        other.createdAt == createdAt &&
-        other.updatedAt == updatedAt;
+    return this;
   }
 }

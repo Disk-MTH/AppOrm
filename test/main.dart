@@ -25,9 +25,8 @@ void main() async {
   final AbstractLogger logger = Logger();
   Utils.logger = logger;
 
-  final AppwriteOrm appOrm = AppwriteOrm(databases);
+  final AppwriteOrm appOrm = AppwriteOrm(databases, "Data");
   await appOrm.setup(
-    "65d4bcc6bfbefe3e6b61",
     [
       AddressRepository(),
       Repository<User>(),
@@ -44,7 +43,7 @@ void main() async {
 
   logger.log(addressRepositoryDeserialized);*/
 
-  final aRepo = appOrm.getRepository<AddressRepository>()!;
+  /*final aRepo = appOrm.getRepository<AddressRepository>()!;
   final uRepo = appOrm.getRepository<Repository<User>>()!;
 
   final a = aRepo.init(Address("Paris"));
@@ -56,7 +55,7 @@ void main() async {
   final uS = u.serialize();
 
   final uD = User.orm(uS);
-  logger.log(uD);
+  logger.log(uD);*/
 
   exit(0);
 }
@@ -86,24 +85,24 @@ class AddressRepository extends Repository<Address> {
               Crud.create,
               enums.Role.user,
               id: "exampleId",
-              resource: Verification.verified,
+              resource: permission.Permission.verified,
             ),
             permission.Permission(
               Crud.create,
               enums.Role.user,
               id: "exampleId",
-              resource: Verification.unverified,
+              resource: permission.Permission.unverified,
             ),
             permission.Permission(Crud.create, enums.Role.users),
             permission.Permission(
               Crud.create,
               enums.Role.users,
-              resource: Verification.verified,
+              resource: permission.Permission.verified,
             ),
             permission.Permission(
               Crud.create,
               enums.Role.users,
-              resource: Verification.unverified,
+              resource: permission.Permission.unverified,
             ),
             permission.Permission(Crud.create, enums.Role.guests),
             permission.Permission(Crud.create, enums.Role.team,

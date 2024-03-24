@@ -6,7 +6,6 @@ import "package:app_orm/src/identifiable.dart";
 import "package:app_orm/src/index.dart";
 import "package:app_orm/src/permission.dart";
 import "package:app_orm/src/utils/reflection.dart";
-import "package:app_orm/src/utils/serializable.dart";
 import "package:app_orm/src/utils/utils.dart";
 
 import "orm.dart";
@@ -65,38 +64,6 @@ class Repository<T extends Entity> extends Identifiable {
   }
 
   Repository.orm(super.data) : super.orm();
-
-  //TODO remove, replaced by orm
-  Repository.fromMap(Map<String, dynamic> data) {
-    deserialize(data);
-  }
-
-  //TODO remove, replaced by fromMap
-  Repository.fromExisting(Repository repository) {
-    databaseId = repository.databaseId;
-    name = repository.name;
-    documentSecurity = repository.documentSecurity;
-    enabled = repository.enabled;
-    attributes.addAll(repository.attributes);
-    permissions.addAll(repository.permissions);
-    indexes.addAll(repository.indexes);
-  }
-
-  @override
-  bool equals(Serializable other) {
-    return other is Repository &&
-        super.equals(other) &&
-        other.databaseId == databaseId &&
-        other.name == name &&
-        other.documentSecurity == documentSecurity &&
-        other.enabled == enabled &&
-        other.attributes.length == attributes.length &&
-        !other.attributes.any((o) => !attributes.any((e) => o.equals(e))) &&
-        other.permissions.length == permissions.length &&
-        !other.permissions.any((o) => !permissions.any((e) => o.equals(e))) &&
-        other.indexes.length == indexes.length &&
-        !other.indexes.any((o) => !indexes.any((e) => o.equals(e)));
-  }
 
   T init(T entity) {
     entity.id = Utils.uniqueId();

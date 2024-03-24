@@ -14,11 +14,11 @@ class Utils {
 
   static const int stringMax = 1073741824;
 
-  static const int intMin = -intMax;
+  static const int intMin = -(intMax + 1);
   static const int intMax = 9223372036854775807;
 
-  static const double floatMin = -floatMax;
-  static const double floatMax = 1.7976931348623157e+308;
+  static const double doubleMin = -doubleMax;
+  static const double doubleMax = 1.7976931348623157e+308;
 
   static String uniqueId() {
     return List.generate(
@@ -28,15 +28,18 @@ class Utils {
   }
 
   static String beautify(dynamic input) {
-    if (input is Serializable) {
+    if (input is String) {
+      return input;
+    } else if (input is Serializable) {
       return "${input.runtimeType}\n${JsonEncoder.withIndent("  ").convert(input.serialize())}";
     } else if (input is List<Serializable>) {
       return "${input.runtimeType}\n${input.map((e) => beautify(e)).join("\n")}";
-    } else if (input is Map<String, dynamic>) {
-      return JsonEncoder.withIndent("  ").convert(input);
-    } else if (input is List<Map<String, dynamic>>) {
-      return input.map((e) => beautify(e)).join("\n");
     }
-    return input.toString();
+
+    try {
+      return "\n${JsonEncoder.withIndent("  ").convert(input)}";
+    } catch (e) {
+      return input.toString();
+    }
   }
 }

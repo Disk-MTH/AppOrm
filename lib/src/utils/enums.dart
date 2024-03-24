@@ -8,8 +8,6 @@ enum Role { any, guests, user, users, team, member, label }
 
 enum Modifier { required, array, defaultValue, size, min, max, elements }
 
-enum Verification { verified, unverified }
-
 enum SortOrder { asc, desc }
 
 enum IndexType { key, unique, fulltext }

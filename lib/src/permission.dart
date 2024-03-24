@@ -1,52 +1,19 @@
-import 'package:app_orm/src/utils/serializable.dart';
+import "package:app_orm/src/utils/serializable.dart";
 
-import 'utils/enums.dart';
+import "utils/enums.dart";
 
 class Permission with Serializable {
+  static const String verified = "verified";
+  static const String unverified = "unverified";
+
   late Crud crud;
   late Role role;
   late String? id;
-  late dynamic resource;
+  late String? resource;
 
   Permission(this.crud, this.role, {this.id, this.resource}) {
-    if (role == Role.any && (id != null || resource != null)) {
-      throw "\"$role\" role can't have an id or resource";
-    }
-
-    if (role == Role.user &&
-        (id == null || (resource != null && resource is! Verification))) {
-      throw "\"$role\" role must have an id and his resource must be a Verification (or null)";
-    }
-
-    if (role == Role.users &&
-        (id != null || (resource != null && resource is! Verification))) {
-      throw "\"$role\" role can't have an id and his resource must be a Verification (or null)";
-    }
-
-    if (role == Role.guests && (id != null || resource != null)) {
-      throw "\"$role\" role can't have an id or resource";
-    }
-
-    if (role == Role.team && id == null) {
-      throw "\"$role\" role must have an id";
-    }
-
-    if (role == Role.member && (id == null || resource != null)) {
-      throw "\"$role\" role must have an id and can't have a resource";
-    }
-
-    if (role == Role.label && (id == null || resource != null)) {
-      throw "\"$role\" role must have an id and can't have a resource";
-    }
-
-    if (resource is Verification) {
-      resource = (resource as Verification).name;
-    }
-
-    resource = resource?.toString();
+    _checkValidity();
   }
-
-  Permission.empty();
 
   Permission.fromModel(String permission) {
     if (permission.contains("users/")) {
@@ -54,7 +21,6 @@ class Permission with Serializable {
     }
 
     final RegExp pattern = RegExp(r'(\w+)\("(\w+)(?:[:]?(\w+)(?:/(\w+))?)?"\)');
-
     final Match? match = pattern.firstMatch(permission);
 
     if (match == null) {
@@ -81,6 +47,8 @@ class Permission with Serializable {
         : null;
 
     resource = resourceString;
+
+    _checkValidity();
   }
 
   @override
@@ -89,7 +57,7 @@ class Permission with Serializable {
       "role": role.name,
       "crud": crud.name,
       if (id != null) "id": id,
-      if (resource != null) "resource": resource,
+      if (resource != null) "resource": resource.toString(),
     };
   }
 
@@ -99,26 +67,47 @@ class Permission with Serializable {
     crud = Crud.values.firstWhere((e) => e.name == data["crud"]);
     id = data["id"];
     resource = data["resource"];
+    _checkValidity();
     return this;
-  }
-
-  @override
-  bool equals(Serializable other) {
-    return other is Permission &&
-        other.crud == crud &&
-        other.role == role &&
-        other.id == id &&
-        other.resource == resource;
   }
 
   String get string {
     return "${crud.name}(\"${role.name}${id != null ? ":$id" : ""}${resource != null ? "/$resource" : ""}\")";
   }
 
-  Verification? get status {
-    if (resource == null) return null;
-    return Verification.values
-        .where((e) => e.toString() == resource)
-        .firstOrNull;
+  void _checkValidity() {
+    if (role == Role.any && (id != null || resource != null)) {
+      throw "\"$role\" role can't have an id or resource";
+    }
+
+    if (role == Role.user &&
+        (id == null ||
+            (resource != null &&
+                (resource != verified && resource != unverified)))) {
+      throw "\"$role\" role must have an id and his resource must be a Verification (or null)";
+    }
+
+    if (role == Role.users &&
+        (id != null ||
+            (resource != null &&
+                (resource != verified && resource != unverified)))) {
+      throw "\"$role\" role can't have an id and his resource must be a Verification (or null)";
+    }
+
+    if (role == Role.guests && (id != null || resource != null)) {
+      throw "\"$role\" role can't have an id or resource";
+    }
+
+    if (role == Role.team && id == null) {
+      throw "\"$role\" role must have an id";
+    }
+
+    if (role == Role.member && (id == null || resource != null)) {
+      throw "\"$role\" role must have an id and can't have a resource";
+    }
+
+    if (role == Role.label && (id == null || resource != null)) {
+      throw "\"$role\" role must have an id and can't have a resource";
+    }
   }
 }

@@ -8,11 +8,59 @@ import "../appwrite_orm.dart";
 import 'enums.dart';
 
 class DatabaseUtils {
+  static Future<List<Database>> listDatabases(AppwriteOrm orm) async {
+    final logger = Utils.logger;
+    final List<Database> databases = [];
+
+    await orm.appwriteDB
+        .list()
+        .then((value) => databases.addAll(value.databases))
+        .onError((error, stackTrace) {
+      logger.error(
+        "Failed to list databases",
+        exception: "$error\n$stackTrace",
+      );
+    });
+
+    return databases;
+  }
+
+  static Future<bool> createDatabase(AppwriteOrm orm) async {
+    final logger = Utils.logger;
+    bool failed = false;
+
+    await orm.appwriteDB
+        .create(
+      databaseId: Utils.uniqueId(),
+      name: orm.name,
+      enabled: orm.enabled,
+    )
+        .then((value) {
+      orm.id = value.$id;
+      orm.createdAt = value.$createdAt;
+      orm.updatedAt = value.$updatedAt;
+
+      logger.log(
+        "Database \"{}\" created",
+        args: [orm.name],
+      );
+    }).onError((error, stackTrace) {
+      failed = true;
+      logger.error(
+        "Failed to create database",
+        exception: "$error\n$stackTrace",
+      );
+    });
+
+    if (failed) return false;
+    return true;
+  }
+
   static Future<List<Collection>> listCollections(AppwriteOrm orm) async {
     final logger = Utils.logger;
     final List<Collection> collections = [];
 
-    await orm.databases
+    await orm.appwriteDB
         .listCollections(databaseId: orm.id)
         .then((value) => collections.addAll(value.collections))
         .onError((error, stackTrace) {
@@ -33,7 +81,7 @@ class DatabaseUtils {
     final logger = Utils.logger;
     bool failed = false;
 
-    await orm.databases
+    await orm.appwriteDB
         .createCollection(
       databaseId: orm.id,
       collectionId: Utils.uniqueId(),
@@ -51,6 +99,13 @@ class DatabaseUtils {
         "Collection \"{}\" created in database \"{}\"",
         args: [repository.name, orm.name],
       );
+
+      for (var permission in repository.permissions) {
+        logger.log(
+          "Permission \"{}\" created in collection \"{}\"",
+          args: [permission.string, repository.name],
+        );
+      }
     }).onError((error, stackTrace) {
       failed = true;
       logger.error(
@@ -65,11 +120,11 @@ class DatabaseUtils {
     for (var attribute in repository.attributes) {
       switch (attribute.type) {
         case AttributeType.entity:
-          await orm.databases
+          await orm.appwriteDB
               .createStringAttribute(
             databaseId: orm.id,
             collectionId: repository.id,
-            key: attribute.key,
+            key: "${attribute.key}_ORM_ENTITY",
             xrequired: attribute.modifiers[Modifier.required] ?? false,
             array: attribute.modifiers[Modifier.array] ?? false,
             size: Utils.idLength,
@@ -93,7 +148,7 @@ class DatabaseUtils {
           });
           break;
         case AttributeType.string:
-          await orm.databases
+          await orm.appwriteDB
               .createStringAttribute(
             databaseId: orm.id,
             collectionId: repository.id,
@@ -122,7 +177,7 @@ class DatabaseUtils {
           });
           break;
         case AttributeType.integer:
-          await orm.databases
+          await orm.appwriteDB
               .createIntegerAttribute(
             databaseId: orm.id,
             collectionId: repository.id,
@@ -152,7 +207,7 @@ class DatabaseUtils {
           });
           break;
         case AttributeType.double:
-          await orm.databases
+          await orm.appwriteDB
               .createFloatAttribute(
             databaseId: orm.id,
             collectionId: repository.id,
@@ -160,8 +215,8 @@ class DatabaseUtils {
             xrequired: attribute.modifiers[Modifier.required] ?? false,
             array: attribute.modifiers[Modifier.array] ?? false,
             xdefault: attribute.modifiers[Modifier.defaultValue],
-            min: attribute.modifiers[Modifier.min] ?? Utils.floatMin,
-            max: attribute.modifiers[Modifier.max] ?? Utils.floatMax,
+            min: attribute.modifiers[Modifier.min] ?? Utils.doubleMin,
+            max: attribute.modifiers[Modifier.max] ?? Utils.doubleMax,
           )
               .then((value) {
             attribute.status = Status.values.firstWhere(
@@ -182,7 +237,7 @@ class DatabaseUtils {
           });
           break;
         case AttributeType.boolean:
-          await orm.databases
+          await orm.appwriteDB
               .createBooleanAttribute(
             databaseId: orm.id,
             collectionId: repository.id,
@@ -210,7 +265,7 @@ class DatabaseUtils {
           });
           break;
         case AttributeType.datetime:
-          await orm.databases
+          await orm.appwriteDB
               .createDatetimeAttribute(
             databaseId: orm.id,
             collectionId: repository.id,
@@ -238,7 +293,7 @@ class DatabaseUtils {
           });
           break;
         case AttributeType.email:
-          await orm.databases
+          await orm.appwriteDB
               .createEmailAttribute(
             databaseId: orm.id,
             collectionId: repository.id,
@@ -266,7 +321,7 @@ class DatabaseUtils {
           });
           break;
         case AttributeType.ip:
-          await orm.databases
+          await orm.appwriteDB
               .createIpAttribute(
             databaseId: orm.id,
             collectionId: repository.id,
@@ -294,7 +349,7 @@ class DatabaseUtils {
           });
           break;
         case AttributeType.url:
-          await orm.databases
+          await orm.appwriteDB
               .createUrlAttribute(
             databaseId: orm.id,
             collectionId: repository.id,
@@ -322,7 +377,7 @@ class DatabaseUtils {
           });
           break;
         case AttributeType.enumeration:
-          await orm.databases
+          await orm.appwriteDB
               .createEnumAttribute(
             databaseId: orm.id,
             collectionId: repository.id,
@@ -362,7 +417,7 @@ class DatabaseUtils {
 
     do {
       await Future.delayed(Duration(milliseconds: 50));
-    } while ((await orm.databases.listAttributes(
+    } while ((await orm.appwriteDB.listAttributes(
       databaseId: orm.id,
       collectionId: repository.id,
     ))
@@ -370,7 +425,7 @@ class DatabaseUtils {
         .any((e) => e["status"] != Status.available.name));
 
     for (var index in repository.indexes) {
-      await orm.databases
+      await orm.appwriteDB
           .createIndex(
         databaseId: orm.id,
         collectionId: repository.id,
@@ -409,7 +464,7 @@ class DatabaseUtils {
     final logger = Utils.logger;
     bool failed = false;
 
-    await orm.databases
+    await orm.appwriteDB
         .deleteCollection(
       databaseId: orm.id,
       collectionId: id,
@@ -442,7 +497,7 @@ class DatabaseUtils {
     final logger = Utils.logger;
     final List<Document> documents = [];
 
-    await orm.databases
+    await orm.appwriteDB
         .listDocuments(
           databaseId: orm.id,
           collectionId: repository.id,
@@ -470,7 +525,7 @@ class DatabaseUtils {
     final logger = Utils.logger;
     bool failed = false;
 
-    await orm.databases.createDocument(
+    await orm.appwriteDB.createDocument(
       databaseId: orm.id,
       collectionId: repository.id,
       documentId: Utils.uniqueId(),

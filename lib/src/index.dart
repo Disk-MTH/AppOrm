@@ -1,18 +1,18 @@
-import 'package:app_orm/src/utils/enums.dart';
-import 'package:app_orm/src/utils/serializable.dart';
+import "package:app_orm/src/utils/enums.dart";
+import "package:app_orm/src/utils/serializable.dart";
 
 class Index with Serializable {
   late String key;
   late IndexType type;
   late Map<String, SortOrder> attributes;
-  late Status? status;
+  late Status status;
   late String? error;
 
   Index(this.key, this.type, this.attributes)
-      : status = null,
-        error = null;
-
-  Index.empty();
+      : status = Status.available,
+        error = null {
+    _checkValidity();
+  }
 
   Index.fromModel(Map<String, dynamic> index) {
     key = index["key"];
@@ -21,7 +21,6 @@ class Index with Serializable {
       (e) => e.toString().split('.').last == index["type"],
     );
 
-    //TODO: check if we can reduce this
     List<String> attributesList = List<String>.from(index["attributes"]);
     List<String> ordersList = List<String>.from(index["orders"]);
 
@@ -37,6 +36,8 @@ class Index with Serializable {
     );
 
     error = index["error"].isEmpty ? null : index["error"];
+
+    _checkValidity();
   }
 
   @override
@@ -45,7 +46,7 @@ class Index with Serializable {
       "key": key,
       "type": type.name,
       "attributes": attributes.map((key, value) => MapEntry(key, value.name)),
-      "status": status?.name,
+      "status": status.name,
       "error": error,
     };
   }
@@ -60,18 +61,19 @@ class Index with Serializable {
         (e) => e.name == value.toLowerCase(),
       );
     });
-    status = Status.values.where((e) => e.name == data["status"]).firstOrNull;
+    status = Status.values.firstWhere((e) => e.name == data["status"]);
     error = data["error"];
+    _checkValidity();
     return this;
   }
 
-  @override
-  bool equals(Serializable other) {
-    return other is Index &&
-        other.key == key &&
-        other.type == type &&
-        other.attributes.length == attributes.length &&
-        !other.attributes.entries.any((o) => !attributes.entries
-            .any((e) => o.key == e.key && o.value == e.value));
+  void _checkValidity() {
+    if (key.isEmpty) {
+      throw "Index key cannot be empty";
+    }
+
+    if (attributes.isEmpty) {
+      throw "Index modifiers cannot be empty";
+    }
   }
 }

@@ -2,7 +2,7 @@ import "package:app_orm/src/identifiable.dart";
 import "package:app_orm/src/orm.dart";
 import "package:app_orm/src/permission.dart";
 
-import 'utils/enums.dart';
+import "utils/enums.dart";
 
 abstract class Entity extends Identifiable {
   @Orm(AttributeType.native)
